@@ -28,8 +28,10 @@ const RoleSelect = ({ password, onRoleChange, onRoleIdGenerate }) => {
         className="w-full border rounded-lg p-2"
       >
         <option value="">-- Select Role --</option>
+        <option value="ADMIN">Admin</option>
         <option value="POLICE">Police</option>
         <option value="LAWYER">Lawyer</option>
+        <option value="FORENSIC">Forensic Officer</option>
         <option value="JUDGE">Judge</option>
       </select>
 

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { getSession, clearSession } from "../utils/auth";
+import DashboardSwitcher from "../components/DashboardSwitcher";
 
 export default function LawyerDashboard() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export default function LawyerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <DashboardSwitcher />
       <nav className="bg-purple-600 text-white p-4">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Lawyer Dashboard</h1>

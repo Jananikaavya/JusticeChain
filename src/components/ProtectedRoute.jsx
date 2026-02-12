@@ -9,7 +9,12 @@ export default function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Role mismatch
+  // ADMIN has access to all dashboards
+  if (session.role === 'ADMIN') {
+    return children;
+  }
+
+  // Role mismatch for non-admin users
   if (allowedRole && session.role !== allowedRole) {
     return <Navigate to="/login" replace />;
   }

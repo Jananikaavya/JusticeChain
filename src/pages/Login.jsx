@@ -4,14 +4,18 @@ import WalletConnect from "../components/WalletConnect";
 import { setSession } from "../utils/auth";
 
 const ADMIN_WALLET = "0x7f1F93f7d1F58AC2644A28b74bd3063123C25CdD"; // Admin wallet address
+const API_URL = 'http://localhost:5000/api/auth';
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [roleId, setRoleId] = useState("");
   const [wallet, setWallet] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Update isAdmin state when wallet changes
   useEffect(() => {
@@ -32,10 +36,12 @@ export default function Login() {
     }
   }, [wallet]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setError("");
+
     // 1. Wallet must be connected
     if (!wallet) {
-      alert("Please connect MetaMask");
+      setError("Please connect MetaMask");
       return;
     }
 
@@ -46,36 +52,56 @@ export default function Login() {
     // 2. Admin login (wallet only, no username/password needed)
     if (normalizedWallet === normalizedAdmin) {
       setSession({ role: "ADMIN", wallet, username: "Admin" });
-      navigate("/admin");
+      navigate("/dashboard/admin");
       return;
     }
 
     // 3. Normal user login (username and password required)
     if (!username || !password) {
-      alert("Please enter username and password");
+      setError("Please enter username and password");
       return;
     }
 
-    const data = localStorage.getItem(username);
+    setLoading(true);
 
-    if (!data) {
-      alert("User not found");
-      return;
-    }
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+          wallet
+        })
+      });
 
-    const user = JSON.parse(data);
+      const data = await response.json();
 
-    // 4. Validate credentials (password and wallet must match)
-    if (user.password === password && user.wallet === wallet) {
-      // 5. Set session after success
-      setSession(user);
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
 
-      // 6. Redirect by role
-      if (user.role === "POLICE") navigate("/dashboard/police");
-      if (user.role === "LAWYER") navigate("/dashboard/lawyer");
-      if (user.role === "JUDGE") navigate("/dashboard/judge");
-    } else {
-      alert("Invalid username, password, or wallet");
+      // Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      setSession(data.user);
+
+      // Redirect by role
+      if (data.user.role === "ADMIN") navigate("/dashboard/admin");
+      else if (data.user.role === "POLICE") navigate("/dashboard/police");
+      else if (data.user.role === "LAWYER") navigate("/dashboard/lawyer");
+      else if (data.user.role === "FORENSIC") navigate("/dashboard/forensic");
+      else if (data.user.role === "JUDGE") navigate("/dashboard/judge");
+      else navigate("/");
+
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,6 +114,12 @@ export default function Login() {
         <h3 className="text-2xl font-bold mb-6 text-center text-gray-800">
           Login
         </h3>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
         <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-gray-700">
@@ -104,6 +136,7 @@ export default function Login() {
                 className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
               />
 
               <input
@@ -112,6 +145,16 @@ export default function Login() {
                 className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+
+              <input
+                type="text"
+                placeholder="Role ID (from registration email)"
+                className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                value={roleId}
+                onChange={(e) => setRoleId(e.target.value)}
+                disabled={loading}
               />
             </>
           )}
@@ -133,9 +176,10 @@ export default function Login() {
 
           <button
             onClick={handleLogin}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition"
+            disabled={loading}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           <p className="text-center text-gray-600 text-sm">

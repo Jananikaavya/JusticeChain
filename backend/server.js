@@ -1,53 +1,70 @@
+// MUST be first line
+import './config/env.js';
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import authRoutes from './routes/authRoutes.js';
-import { testEmailConfig } from './utils/emailService.js';
 
-dotenv.config();
+import authRoutes from './routes/authRoutes.js';
+import caseRoutes from './routes/caseRoutes.js';
+import evidenceRoutes from './routes/evidenceRoutes.js';
+
+import { authenticateToken } from './middleware/authMiddleware.js';
+import { testEmailConfig } from './utils/emailService.js';
+import { testPinataConnection } from './utils/pinataService.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+/* -------------------- Middleware -------------------- */
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true
 }));
+
 app.use(express.json());
 
-// MongoDB Connection
+/* -------------------- MongoDB -------------------- */
 const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/justice-chain';
-    await mongoose.connect(mongoUri);
-    console.log('MongoDB connected successfully');
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB connected successfully');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error.message);
     process.exit(1);
   }
 };
 
-// Test email config
-const testEmail = async () => {
-  const isValid = await testEmailConfig();
-  if (!isValid) {
-    console.warn('⚠️ Email configuration may not be properly set up. Check your .env file.');
-  }
+/* -------------------- Health -------------------- */
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    service: "JusticeChain Backend",
+    time: new Date()
+  });
+});
+
+/* -------------------- Routes -------------------- */
+app.use('/api/auth', authRoutes);
+app.use('/api/cases', authenticateToken, caseRoutes);
+app.use('/api/evidence', authenticateToken, evidenceRoutes);
+
+/* -------------------- Boot -------------------- */
+const startServer = async () => {
+  app.listen(PORT, async () => {
+    console.log(`🚀 Justice Chain running on http://localhost:${PORT}`);
+
+    await connectDB();
+
+    const emailOK = await testEmailConfig();
+    if (emailOK) console.log('✅ Email service verified');
+    else console.warn('⚠️ Email service failed');
+
+    const pinataOK = await testPinataConnection();
+    if (pinataOK) console.log('✅ Pinata connected');
+    else console.warn('⚠️ Pinata not connected');
+  });
 };
 
-// Routes
-app.use('/api/auth', authRoutes);
+startServer();
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ message: 'Backend is running' });
-});
-
-// Start server
-app.listen(PORT, async () => {
-  console.log(`Justice Chain Backend running on http://localhost:${PORT}`);
-  await connectDB();
-  await testEmail();
-});

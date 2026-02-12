@@ -13,10 +13,11 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 
 // Dashboard Pages
+import AdminDashboard from './pages/AdminDashboard'
 import PoliceDashboard from './pages/PoliceDashboard'
 import LawyerDashboard from './pages/LawyerDashboard'
+import ForensicDashboard from './pages/ForensicDashboard'
 import JudgeDashboard from './pages/JudgeDashboard'
-import AdminDashboard from './pages/AdminDashboard'
 
 function App() {
   return (
@@ -36,6 +37,14 @@ function App() {
 
         {/* Protected Dashboard Routes */}
         <Route
+          path="/dashboard/admin"
+          element={
+            <ProtectedRoute allowedRole="ADMIN">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/dashboard/police"
           element={
             <ProtectedRoute allowedRole="POLICE">
@@ -52,18 +61,18 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/judge"
+          path="/dashboard/forensic"
           element={
-            <ProtectedRoute allowedRole="JUDGE">
-              <JudgeDashboard />
+            <ProtectedRoute allowedRole="FORENSIC">
+              <ForensicDashboard />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/admin"
+          path="/dashboard/judge"
           element={
-            <ProtectedRoute allowedRole="ADMIN">
-              <AdminDashboard />
+            <ProtectedRoute allowedRole="JUDGE">
+              <JudgeDashboard />
             </ProtectedRoute>
           }
         />
