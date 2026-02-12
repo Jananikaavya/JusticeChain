@@ -1,0 +1,143 @@
+import User from '../models/User.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { sendRoleIdEmail } from '../utils/emailService.js';
+
+// Generate unique Role ID
+const generateRoleId = (role) => {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const rolePrefix = role.toUpperCase().substring(0, 4);
+  return `${rolePrefix}_${timestamp}_${random}`;
+};
+
+// Register new user
+export const register = async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    // Validation
+    if (!username || !email || !password || !role) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Check if username already exists (email can be reused)
+    const existingUser = await User.findOne({ username });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate Role ID
+    const roleId = generateRoleId(role);
+
+    // Create new user
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      role,
+      roleId
+    });
+
+    await newUser.save();
+
+    // Send role ID via email
+    await sendRoleIdEmail(email, username, roleId, role);
+
+    res.status(201).json({
+      message: 'Registration successful! Check your email for Role ID',
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        roleId: newUser.roleId
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Registration failed', error: error.message });
+  }
+};
+
+// Login user
+export const login = async (req, res) => {
+  try {
+    const { username, password, wallet } = req.body;
+
+    // Validation
+    if (!username || !password || !wallet) {
+      return res.status(400).json({ message: 'Username, password, and wallet are required' });
+    }
+
+    // Find user
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    // Compare passwords
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Invalid password' });
+    }
+
+    // Update wallet address
+    user.wallet = wallet;
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, username: user.username, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        roleId: user.roleId,
+        wallet: user.wallet
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Login failed', error: error.message });
+  }
+};
+
+// Get user by ID
+export const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
+  }
+};
+
+// Get all users (admin only)
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.status(200).json({ users });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users', error: error.message });
+  }
+};
