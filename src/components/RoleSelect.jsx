@@ -30,7 +30,6 @@ const RoleSelect = ({ password, onRoleChange, onRoleIdGenerate }) => {
         <option value="">-- Select Role --</option>
         <option value="ADMIN">Admin</option>
         <option value="POLICE">Police</option>
-        <option value="LAWYER">Lawyer</option>
         <option value="FORENSIC">Forensic Officer</option>
         <option value="JUDGE">Judge</option>
       </select>

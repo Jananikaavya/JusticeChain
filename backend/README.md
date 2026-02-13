@@ -64,10 +64,10 @@ Backend will run on `http://localhost:5000`
 **POST** `/api/auth/register`
 ```json
 {
-  "username": "john_lawyer",
-  "email": "john@example.com",
+  "username": "john_police",
+  "email": "john.police@example.com",
   "password": "password123",
-  "role": "LAWYER"
+  "role": "POLICE"
 }
 ```
 
@@ -77,10 +77,10 @@ Response:
   "message": "Registration successful! Check your email for Role ID",
   "user": {
     "id": "...",
-    "username": "john_lawyer",
-    "email": "john@example.com",
-    "role": "LAWYER",
-    "roleId": "LAWY_1707604800000_5432"
+    "username": "john_police",
+    "email": "john.police@example.com",
+    "role": "POLICE",
+    "roleId": "POLI_1707604800000_5432"
   }
 }
 ```
@@ -89,7 +89,7 @@ Response:
 **POST** `/api/auth/login`
 ```json
 {
-  "username": "john_lawyer",
+  "username": "john_police",
   "password": "password123",
   "wallet": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 }
@@ -102,10 +102,10 @@ Response:
   "token": "jwt-token-here",
   "user": {
     "id": "...",
-    "username": "john_lawyer",
-    "email": "john@example.com",
-    "role": "LAWYER",
-    "roleId": "LAWY_1707604800000_5432",
+    "username": "john_police",
+    "email": "john.police@example.com",
+    "role": "POLICE",
+    "roleId": "POLI_1707604800000_5432",
     "wallet": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
   }
 }
@@ -124,7 +124,7 @@ Response:
 ✅ Secure password hashing (bcryptjs)
 ✅ JWT authentication
 ✅ Wallet address management
-✅ Role-based access (LAWYER, JUDGE, POLICE)
+✅ Role-based access (ADMIN, POLICE, FORENSIC, JUDGE)
 ✅ Email notifications
 
 ## Frontend Integration
@@ -140,7 +140,7 @@ Login API endpoint: `POST http://localhost:5000/api/auth/login`
 - username (String, unique, required)
 - email (String, unique, required)
 - password (String, hashed, required)
-- role (Enum: LAWYER, JUDGE, POLICE, required)
+- role (Enum: ADMIN, POLICE, FORENSIC, JUDGE, required)
 - roleId (String, unique, auto-generated)
 - wallet (String, optional)
 - createdAt (Date, auto)

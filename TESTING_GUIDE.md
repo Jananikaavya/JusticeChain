@@ -1,4 +1,4 @@
-# 🧪 Testing All 5 Roles - Quick Guide
+# 🧪 Testing All 4 Roles - Quick Guide
 
 ## What You Need
 
@@ -40,22 +40,7 @@
 7. You see: Police Dashboard with "Create Case" option
 ```
 
-### 3. **Test LAWYER Role**
-```
-1. Go to /register
-2. Fill form:
-   - Username: lawyer_test
-   - Email: lawyer@example.com
-   - Password: Test@123
-   - Role: Lawyer
-3. Click Register
-4. Go to /login
-5. Enter credentials
-6. Should redirect to /dashboard/lawyer ✓
-7. You see: Lawyer Dashboard with case list
-```
-
-### 4. **Test FORENSIC Role**
+### 3. **Test FORENSIC Role**
 ```
 1. Go to /register
 2. Fill form:
@@ -70,7 +55,7 @@
 7. You see: Forensic Dashboard with evidence analysis
 ```
 
-### 5. **Test JUDGE Role**
+### 4. **Test JUDGE Role**
 ```
 1. Go to /register
 2. Fill form:

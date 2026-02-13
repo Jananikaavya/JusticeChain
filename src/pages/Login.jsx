@@ -87,12 +87,11 @@ export default function Login() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
-      setSession(data.user);
+      setSession({ ...data.user, token: data.token });
 
       // Redirect by role
       if (data.user.role === "ADMIN") navigate("/dashboard/admin");
       else if (data.user.role === "POLICE") navigate("/dashboard/police");
-      else if (data.user.role === "LAWYER") navigate("/dashboard/lawyer");
       else if (data.user.role === "FORENSIC") navigate("/dashboard/forensic");
       else if (data.user.role === "JUDGE") navigate("/dashboard/judge");
       else navigate("/");

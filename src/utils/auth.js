@@ -5,11 +5,27 @@ export const setSession = (user) => {
 
 export const getSession = () => {
   const session = localStorage.getItem("session");
-  return session ? JSON.parse(session) : null;
+  const storedUser = localStorage.getItem("user");
+  const token = localStorage.getItem("token");
+  const parsedSession = session ? JSON.parse(session) : null;
+  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+
+  const merged = parsedSession || parsedUser;
+  if (!merged) {
+    return null;
+  }
+
+  if (token && !merged.token) {
+    merged.token = token;
+  }
+
+  return merged;
 };
 
 export const clearSession = () => {
   localStorage.removeItem("session");
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 };
 
 export const isLoggedIn = () => {

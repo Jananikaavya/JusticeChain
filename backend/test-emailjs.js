@@ -12,8 +12,8 @@ const testEmailJS = async () => {
     const templateParams = {
       to_email: process.env.EMAILJS_TEST_EMAIL || 'jananikaavya1104@gmail.com',
       user_name: 'Test User',
-      role_id: 'LAWY_1707604800000_5432',
-      user_role: 'LAWYER',
+      role_id: 'POLI_1707604800000_5432',
+      user_role: 'POLICE',
       login_url: 'http://localhost:5173/login'
     };
 

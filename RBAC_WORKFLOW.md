@@ -2,12 +2,11 @@
 
 ## 📋 Overview
 
-Justice Chain implements a **Role-Based Access Control (RBAC)** system with 5 distinct roles:
+Justice Chain implements a **Role-Based Access Control (RBAC)** system with 4 distinct roles:
 1. **ADMIN** - System administrator
 2. **POLICE** - Police officers filing cases
-3. **LAWYER** - Legal professionals
-4. **FORENSIC** - Forensic officers analyzing evidence
-5. **JUDGE** - Judges reviewing and providing verdicts
+3. **FORENSIC** - Forensic officers analyzing evidence
+4. **JUDGE** - Judges reviewing and providing verdicts
 
 ---
 
@@ -19,7 +18,7 @@ User → Registers with Role Selection → System stores role in Database
 ```
 
 **File:** `src/pages/Register.jsx`
-- User selects one of 5 roles during registration
+- User selects one of 4 roles during registration
 - Backend creates user with that role in MongoDB
 - Role ID is generated and sent via email
 
@@ -35,7 +34,6 @@ User → Enters credentials → Backend validates → Returns user data with rol
 - Frontend redirects based on role:
   - ADMIN → `/dashboard/admin`
   - POLICE → `/dashboard/police`
-  - LAWYER → `/dashboard/lawyer`
   - FORENSIC → `/dashboard/forensic`
   - JUDGE → `/dashboard/judge`
 
@@ -100,7 +98,6 @@ Login → Store in localStorage → Any page reads from localStorage → User st
          │
          ├─→ ADMIN → AdminDashboard
          ├─→ POLICE → PoliceDashboard
-         ├─→ LAWYER → LawyerDashboard
          ├─→ FORENSIC → ForensicDashboard
          └─→ JUDGE → JudgeDashboard
 ```
@@ -116,7 +113,6 @@ src/
 │   ├── Register.jsx              # Registration with role selection
 │   ├── AdminDashboard.jsx        # Admin role dashboard
 │   ├── PoliceDashboard.jsx       # Police role dashboard
-│   ├── LawyerDashboard.jsx       # Lawyer role dashboard
 │   ├── ForensicDashboard.jsx     # Forensic role dashboard
 │   └── JudgeDashboard.jsx        # Judge role dashboard
 ├── components/
@@ -182,9 +178,8 @@ backend/
 ```
 1. Register as ADMIN (if allowed)
 2. Register as POLICE
-3. Register as LAWYER
-4. Register as FORENSIC
-5. Register as JUDGE
+3. Register as FORENSIC
+4. Register as JUDGE
 ```
 
 Then login to each account to test the workflow.
@@ -233,7 +228,7 @@ This provides a quick switcher to jump between dashboards while testing.
   username: String,
   email: String,
   password: String (hashed),
-  role: ['ADMIN', 'POLICE', 'LAWYER', 'FORENSIC', 'JUDGE'],
+   role: ['ADMIN', 'POLICE', 'FORENSIC', 'JUDGE'],
   roleId: String (unique),
   wallet: String,
   createdAt: Date
@@ -253,7 +248,7 @@ POST   /api/cases/:id/verdict    # Judge-only action
 
 ## ✅ Checklist: Implementing RBAC
 
-- [x] Define roles (ADMIN, POLICE, LAWYER, FORENSIC, JUDGE)
+- [x] Define roles (ADMIN, POLICE, FORENSIC, JUDGE)
 - [x] Add role field to User model
 - [x] Create registration with role selection
 - [x] Create login with role-based redirect

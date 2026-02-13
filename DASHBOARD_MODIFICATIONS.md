@@ -2,7 +2,7 @@
 
 ## Current Dashboard State
 
-All 5 dashboards are functional but can be enhanced. Here's what can be modified:
+All 4 dashboards are functional but can be enhanced. Here's what can be modified:
 
 ---
 
@@ -34,32 +34,6 @@ All 5 dashboards are functional but can be enhanced. Here's what can be modified
 
 ---
 
-## ⚖️ LAWYER Dashboard - Current Features
-
-### What it has:
-- ✅ Welcome message
-- ✅ Case statistics (counts)
-- ✅ My cases list
-- ✅ Logout button
-
-### What we can add/modify:
-```
-[ ] Assigned cases (not just viewing)
-[ ] Case details modal
-[ ] Evidence review section
-[ ] Case timeline/history
-[ ] Notes & annotations on cases
-[ ] Legal document management
-[ ] Case analysis tools
-[ ] Verdict tracking
-[ ] Case success rate statistics
-[ ] Client communication section
-[ ] Case documents folder
-[ ] Deadline reminders
-[ ] Case progress indicator
-```
-
----
 
 ## 🔬 FORENSIC Dashboard - Current Features
 
@@ -227,15 +201,7 @@ We can add:
 - Legal references
 - Decision history
 
-### **Option E: Enhance LAWYER Dashboard**
-We can add:
-- Assigned cases view
-- Case timeline
-- Legal documents section
-- Notes & annotations
-- Case tracking
-
-### **Option F: Custom Enhancement**
+### **Option E: Custom Enhancement**
 Tell us what you'd like and we'll implement it!
 
 ---
@@ -293,7 +259,6 @@ return (
 src/pages/
 ├─ AdminDashboard.jsx         (Choose)
 ├─ PoliceDashboard.jsx        (Choose)
-├─ LawyerDashboard.jsx        (Choose)
 ├─ ForensicDashboard.jsx      (Choose)
 └─ JudgeDashboard.jsx         (Choose)
 

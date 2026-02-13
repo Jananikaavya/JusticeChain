@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import { getSession } from './utils/auth'
 
 // Public Pages
 import Home from './pages/Home'
@@ -15,11 +16,30 @@ import Register from './pages/Register'
 // Dashboard Pages
 import AdminDashboard from './pages/AdminDashboard'
 import PoliceDashboard from './pages/PoliceDashboard'
-import LawyerDashboard from './pages/LawyerDashboard'
 import ForensicDashboard from './pages/ForensicDashboard'
 import JudgeDashboard from './pages/JudgeDashboard'
 
 function App() {
+  const DashboardRedirect = () => {
+    const session = getSession();
+    if (!session) {
+      return <Navigate to="/login" replace />;
+    }
+
+    switch (session.role) {
+      case "ADMIN":
+        return <Navigate to="/dashboard/admin" replace />;
+      case "POLICE":
+        return <Navigate to="/dashboard/police" replace />;
+      case "FORENSIC":
+        return <Navigate to="/dashboard/forensic" replace />;
+      case "JUDGE":
+        return <Navigate to="/dashboard/judge" replace />;
+      default:
+        return <Navigate to="/" replace />;
+    }
+  };
+
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
@@ -34,6 +54,7 @@ function App() {
         {/* Auth Routes (No Layout) */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<DashboardRedirect />} />
 
         {/* Protected Dashboard Routes */}
         <Route
@@ -49,14 +70,6 @@ function App() {
           element={
             <ProtectedRoute allowedRole="POLICE">
               <PoliceDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/lawyer"
-          element={
-            <ProtectedRoute allowedRole="LAWYER">
-              <LawyerDashboard />
             </ProtectedRoute>
           }
         />

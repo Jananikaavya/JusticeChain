@@ -2,7 +2,7 @@
 
 ## ✅ Dashboard Switcher is Now Installed!
 
-All 5 dashboards now have the **DashboardSwitcher** component in the top-right corner. This allows you to:
+All 4 dashboards now have the **DashboardSwitcher** component in the top-right corner. This allows you to:
 - See which role you're logged in as
 - Quickly switch between dashboards for testing
 - Logout easily
@@ -13,13 +13,13 @@ All 5 dashboards now have the **DashboardSwitcher** component in the top-right c
 
 ### **Step 1: Register Test Accounts**
 
-Create 5 different accounts (one for each role):
+Create 4 different accounts (one for each role):
 
 ```
 Repeat 5 times:
 1. Go to http://localhost:5173/register
 2. Fill in the form with different credentials
-3. Select each role: ADMIN, POLICE, LAWYER, FORENSIC, JUDGE
+3. Select each role: ADMIN, POLICE, FORENSIC, JUDGE
 4. Click Register
 ```
 
@@ -27,7 +27,6 @@ Repeat 5 times:
 ```
 Admin:     admin_test / admin@test.com / Test@123
 Police:    police_test / police@test.com / Test@123
-Lawyer:    lawyer_test / lawyer@test.com / Test@123
 Forensic:  forensic_test / forensic@test.com / Test@123
 Judge:     judge_test / judge@test.com / Test@123
 ```
@@ -68,12 +67,6 @@ Once logged in as any role:
 - Track case status
 - View assigned cases
 
-### **⚖️ Lawyer Dashboard**
-- View active cases
-- Track won cases
-- Manage documents
-- Review case details
-
 ### **🔬 Forensic Dashboard**
 - Analyze assigned evidence
 - Submit forensic reports
@@ -93,7 +86,7 @@ Once logged in as any role:
 ```
 REGISTER ACCOUNT
         ↓
-SELECT ROLE (ADMIN/POLICE/LAWYER/FORENSIC/JUDGE)
+SELECT ROLE (ADMIN/POLICE/FORENSIC/JUDGE)
         ↓
 RECEIVE ROLE ID (via email)
         ↓
@@ -142,7 +135,6 @@ export default function Dashboard() {
 
 - [ ] **Register as ADMIN** - Login and see Admin Dashboard
 - [ ] **Register as POLICE** - Create case functionality visible
-- [ ] **Register as LAWYER** - See case list for lawyer
 - [ ] **Register as FORENSIC** - Evidence analysis options visible
 - [ ] **Register as JUDGE** - Verdict submission visible
 - [ ] **Test Switcher** - Click buttons to switch dashboards
@@ -158,7 +150,6 @@ export default function Dashboard() {
 Added `DashboardSwitcher` import and component to:
 - ✅ src/pages/AdminDashboard.jsx
 - ✅ src/pages/PoliceDashboard.jsx
-- ✅ src/pages/LawyerDashboard.jsx
 - ✅ src/pages/ForensicDashboard.jsx
 - ✅ src/pages/JudgeDashboard.jsx
 

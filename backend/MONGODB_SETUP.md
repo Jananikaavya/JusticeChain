@@ -107,7 +107,7 @@ Once you start using the application:
   username: String (unique),
   email: String (unique),
   password: String (hashed),
-  role: String (LAWYER, JUDGE, POLICE),
+   role: String (ADMIN, POLICE, FORENSIC, JUDGE),
   roleId: String (unique, auto-generated),
   wallet: String (optional),
   createdAt: Date

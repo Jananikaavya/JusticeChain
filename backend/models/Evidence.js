@@ -1,5 +1,20 @@
 import mongoose from 'mongoose';
 
+const chainOfCustodySchema = new mongoose.Schema({
+  action: {
+    type: String,
+    enum: ['UPLOADED', 'ACCESSED', 'VERIFIED', 'LOCKED', 'TRANSFERRED']
+  },
+  performedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  performedByRole: String,
+  timestamp: { type: Date, default: Date.now },
+  details: String,
+  hash: String
+}, { _id: false });
+
 const evidenceSchema = new mongoose.Schema({
   evidenceId: {
     type: String,
@@ -56,6 +71,14 @@ const evidenceSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  sha256Hash: {
+    type: String,
+    default: null
+  },
+  blockchainTxHash: {
+    type: String,
+    default: null
+  },
   smartContractAddress: {
     type: String,
     default: null
@@ -65,6 +88,18 @@ const evidenceSchema = new mongoose.Schema({
     enum: ['UPLOADED', 'PENDING_ANALYSIS', 'ANALYZING', 'ANALYSIS_COMPLETE', 'VERIFIED', 'IMMUTABLE'],
     default: 'UPLOADED'
   },
+  isLocked: {
+    type: Boolean,
+    default: false
+  },
+  lockedAt: Date,
+  lockedBy: mongoose.Schema.Types.ObjectId,
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verifiedAt: Date,
+  verifiedBy: mongoose.Schema.Types.ObjectId,
   analysisStatus: {
     type: String,
     enum: ['PENDING', 'IN_PROGRESS', 'COMPLETE', 'REJECTED'],
@@ -87,25 +122,22 @@ const evidenceSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  evidenceChain: [{
-    action: String,
-    performedBy: mongoose.Schema.Types.ObjectId,
-    timestamp: Date,
-    details: String
-  }],
-  isImmutable: {
+  chainOfCustody: [chainOfCustodySchema],
+  geoLocation: {
+    latitude: Number,
+    longitude: Number,
+    address: String
+  },
+  ipfsVerified: {
     type: Boolean,
     default: false
   },
+  ipfsVerifiedAt: Date,
   uploadedAt: {
     type: Date,
     default: Date.now
   },
   analyzedAt: {
-    type: Date,
-    default: null
-  },
-  verifiedAt: {
     type: Date,
     default: null
   }

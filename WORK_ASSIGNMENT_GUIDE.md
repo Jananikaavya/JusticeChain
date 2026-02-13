@@ -516,6 +516,5 @@ Case Complete! ✓
 | ADMIN | ❌ | ✅ | ✅ | ❌ | ❌ |
 | FORENSIC | ❌ | ❌ | ❌ | ✅ | ❌ |
 | JUDGE | ❌ | ❌ | ❌ | ❌ | ✅ |
-| LAWYER | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 **Key Point:** Each role has a specific purpose and only sees work assigned to them!

@@ -93,7 +93,7 @@ The enhanced Admin Dashboard now includes **7 comprehensive feature categories**
 - Displays all registered users with:
   - Username
   - Email Address
-  - Assigned Role (ADMIN, POLICE, LAWYER, FORENSIC, JUDGE)
+  - Assigned Role (ADMIN, POLICE, FORENSIC, JUDGE)
   - Unique Role ID
   - Wallet Address (truncated for privacy)
 
@@ -104,12 +104,11 @@ The enhanced Admin Dashboard now includes **7 comprehensive feature categories**
 - **Role Reassignment**: Change user roles (if needed)
 
 #### C. Role Management
-Five mandatory roles:
+Four mandatory roles:
 1. **ADMIN**: Full system control
 2. **POLICE**: Case filing and evidence upload
-3. **LAWYER**: Case review and legal consultation
-4. **FORENSIC**: Evidence analysis and reporting
-5. **JUDGE**: Verdict submission and finalization
+3. **FORENSIC**: Evidence analysis and reporting
+4. **JUDGE**: Verdict submission and finalization
 
 #### D. User Status Indicators
 - Active/Inactive status

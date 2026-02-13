@@ -1,8 +1,34 @@
 import Evidence from '../models/Evidence.js';
 import Case from '../models/Case.js';
 import User from '../models/User.js';
+import ActivityLog from '../models/ActivityLog.js';
 import { uploadToPinata, verifyEvidenceImmutability } from '../utils/pinataService.js';
+import crypto from 'crypto';
 import fs from 'fs';
+
+// Helper to log activity
+const logActivity = async (userId, userRole, action, caseId, resourceId = null, description = null) => {
+  try {
+    const logId = `LOG_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    await ActivityLog.create({
+      logId,
+      performedBy: userId,
+      performedByRole: userRole,
+      action,
+      relatedCaseId: caseId,
+      relatedResourceId: resourceId,
+      description,
+      timestamp: new Date()
+    });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+};
+
+// Generate SHA-256 hash
+const generateSHA256 = (data) => {
+  return crypto.createHash('sha256').update(data).digest('hex');
+};
 
 // Upload evidence (Police)
 export const uploadEvidence = async (req, res) => {
@@ -49,6 +75,10 @@ export const uploadEvidence = async (req, res) => {
 
     // Generate Evidence ID
     const evidenceId = `EVID_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    
+    // Generate SHA-256 hash from file content
+    const fileContent = fs.readFileSync(file.path);
+    const sha256Hash = generateSHA256(fileContent);
 
     // Create evidence record
     const evidence = new Evidence({
@@ -64,11 +94,15 @@ export const uploadEvidence = async (req, res) => {
       ipfsHash: pinataResult.ipfsHash,
       pinataUrl: pinataResult.pinataUrl,
       pinataIpfsGatewayUrl: pinataResult.pinataIpfsGatewayUrl,
-      evidenceChain: [{
+      sha256Hash,
+      status: 'UPLOADED',
+      chainOfCustody: [{
         action: 'UPLOADED',
         performedBy: userId,
+        performedByRole: user.role,
         timestamp: new Date(),
-        details: `Evidence uploaded by ${user.username}`
+        details: `Evidence uploaded by ${user.username}`,
+        hash: sha256Hash
       }]
     });
 
@@ -81,12 +115,15 @@ export const uploadEvidence = async (req, res) => {
     // Clean up local file
     fs.unlinkSync(file.path);
 
+    await logActivity(userId, user.role, 'EVIDENCE_UPLOADED', caseData._id, evidenceId, title);
+
     res.status(201).json({
       message: 'Evidence uploaded successfully',
       evidence: {
         _id: evidence._id,
         evidenceId: evidence.evidenceId,
         ipfsHash: evidence.ipfsHash,
+        sha256Hash: evidence.sha256Hash,
         pinataUrl: evidence.pinataUrl
       }
     });
@@ -106,10 +143,12 @@ export const getEvidenceByCase = async (req, res) => {
     const { caseId } = req.params;
 
     const evidences = await Evidence.find({ caseId })
-      .populate('uploadedBy', 'username role')
-      .populate('analyzedBy', 'username role');
+      .populate('uploadedBy', 'username role email')
+      .populate('analyzedBy', 'username role email')
+      .populate('chainOfCustody.performedBy', 'username role')
+      .sort({ uploadedAt: -1 });
 
-    res.json(evidences);
+    res.json({ evidences });
   } catch (error) {
     console.error('Error fetching evidence:', error);
     res.status(500).json({ message: 'Failed to fetch evidence', error: error.message });
@@ -123,7 +162,10 @@ export const getEvidenceById = async (req, res) => {
 
     const evidence = await Evidence.findById(evidenceId)
       .populate('uploadedBy', 'username role email')
-      .populate('analyzedBy', 'username role email');
+      .populate('analyzedBy', 'username role email')
+      .populate('verifiedBy', 'username role')
+      .populate('lockedBy', 'username role')
+      .populate('chainOfCustody.performedBy', 'username role email');
 
     if (!evidence) {
       return res.status(404).json({ message: 'Evidence not found' });
@@ -149,28 +191,26 @@ export const submitAnalysis = async (req, res) => {
       return res.status(403).json({ message: 'Only forensic department can submit analysis' });
     }
 
-    const evidence = await Evidence.findByIdAndUpdate(
-      evidenceId,
-      {
-        status: 'ANALYSIS_COMPLETE',
-        analysisStatus: 'COMPLETE',
-        analyzedBy: userId,
-        analysisReport,
-        analysisNotes,
-        analyzedAt: new Date()
-      },
-      { new: true }
-    );
+    evidence.status = 'ANALYSIS_COMPLETE';
+    evidence.analysisStatus = 'COMPLETE';
+    evidence.analyzedBy = userId;
+    evidence.analysisReport = analysisReport;
+    evidence.analysisNotes = analysisNotes;
+    evidence.analyzedAt = new Date();
 
-    // Add to evidence chain
-    evidence.evidenceChain.push({
-      action: 'ANALYSIS_SUBMITTED',
+    // Add to chain of custody
+    evidence.chainOfCustody.push({
+      action: 'ANALYZED',
       performedBy: userId,
+      performedByRole: user.role,
       timestamp: new Date(),
-      details: `Analysis submitted by ${user.username}`
+      details: `Analysis submitted by ${user.username}`,
+      hash: evidence.sha256Hash
     });
 
     await evidence.save();
+
+    await logActivity(userId, user.role, 'EVIDENCE_ANALYZED', evidence.caseId, evidenceId, title);
 
     res.json({
       message: 'Analysis submitted successfully',
@@ -210,24 +250,31 @@ export const markImmutable = async (req, res) => {
       });
     }
 
-    evidence.isImmutable = true;
-    evidence.status = 'IMMUTABLE';
+    evidence.isVerified = true;
+    evidence.status = 'VERIFIED';
     evidence.verifiedAt = new Date();
-    evidence.evidenceChain.push({
-      action: 'MARKED_IMMUTABLE',
+    evidence.verifiedBy = userId;
+    evidence.chainOfCustody.push({
+      action: 'VERIFIED',
       performedBy: userId,
+      performedByRole: user.role,
       timestamp: new Date(),
-      details: `Evidence marked immutable by ${user.username} during hearing`
+      details: `Evidence verified and marked immutable by ${user.username} during hearing`,
+      hash: evidence.sha256Hash
     });
 
     await evidence.save();
+
+    await logActivity(userId, user.role, 'EVIDENCE_VERIFIED', evidence.caseId, evidenceId, 'Evidence verified and marked immutable');
 
     res.json({
       message: 'Evidence marked as immutable',
       evidence: {
         _id: evidence._id,
         evidenceId: evidence.evidenceId,
-        isImmutable: evidence.isImmutable,
+        isVerified: evidence.isVerified,
+        sha256Hash: evidence.sha256Hash,
+        ipfsHash: evidence.ipfsHash,
         accessibleAt: verificationResult.accessibleAt
       }
     });
@@ -238,8 +285,132 @@ export const markImmutable = async (req, res) => {
   }
 };
 
-// Get evidence chain
+// Get evidence chain of custody
 export const getEvidenceChain = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+
+    const evidence = await Evidence.findById(evidenceId)
+      .populate('chainOfCustody.performedBy', 'username role email');
+    
+    if (!evidence) {
+      return res.status(404).json({ message: 'Evidence not found' });
+    }
+
+    res.json({
+      evidenceId: evidence.evidenceId,
+      title: evidence.title,
+      sha256Hash: evidence.sha256Hash,
+      ipfsHash: evidence.ipfsHash,
+      blockchainHash: evidence.blockchainHash,
+      isVerified: evidence.isVerified,
+      isLocked: evidence.isLocked,
+      chainOfCustody: evidence.chainOfCustody
+    });
+
+  } catch (error) {
+    console.error('Error fetching evidence chain:', error);
+    res.status(500).json({ message: 'Failed to fetch evidence chain', error: error.message });
+  }
+};
+
+// Verify evidence (Check IPFS availability)
+export const verifyEvidence = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId);
+    const evidence = await Evidence.findById(evidenceId);
+
+    if (!evidence) {
+      return res.status(404).json({ message: 'Evidence not found' });
+    }
+
+    // Verify on IPFS
+    const verificationResult = await verifyEvidenceImmutability(evidence.ipfsHash);
+
+    if (verificationResult.verified) {
+      evidence.ipfsVerified = true;
+      evidence.ipfsVerifiedAt = new Date();
+      evidence.chainOfCustody.push({
+        action: 'VERIFIED',
+        performedBy: userId,
+        performedByRole: user.role,
+        timestamp: new Date(),
+        details: `Evidence verified on IPFS by ${user.username}`,
+        hash: evidence.sha256Hash
+      });
+      await evidence.save();
+
+      await logActivity(userId, user.role, 'EVIDENCE_VERIFIED', evidence.caseId, evidenceId, 'IPFS verification');
+    }
+
+    res.json({
+      verified: verificationResult.verified,
+      ipfsHash: evidence.ipfsHash,
+      sha256Hash: evidence.sha256Hash,
+      blockchainHash: evidence.blockchainHash,
+      message: verificationResult.verified ? 'Evidence verified on IPFS' : 'Verification failed'
+    });
+  } catch (error) {
+    console.error('Error verifying evidence:', error);
+    res.status(500).json({ message: 'Failed to verify evidence', error: error.message });
+  }
+};
+
+// Lock evidence (After sending to forensic)
+export const lockEvidence = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId);
+    const evidence = await Evidence.findById(evidenceId);
+
+    if (!evidence) {
+      return res.status(404).json({ message: 'Evidence not found' });
+    }
+
+    if (evidence.isLocked) {
+      return res.status(400).json({ message: 'Evidence is already locked' });
+    }
+
+    evidence.isLocked = true;
+    evidence.lockedAt = new Date();
+    evidence.lockedBy = userId;
+    evidence.status = 'IMMUTABLE';
+    evidence.chainOfCustody.push({
+      action: 'LOCKED',
+      performedBy: userId,
+      performedByRole: user.role,
+      timestamp: new Date(),
+      details: `Evidence locked by ${user.username}. Evidence is now READ-ONLY`,
+      hash: evidence.sha256Hash
+    });
+
+    await evidence.save();
+
+    await logActivity(userId, user.role, 'EVIDENCE_LOCKED', evidence.caseId, evidenceId, 'Evidence locked for immutability');
+
+    res.json({
+      message: 'Evidence locked successfully',
+      evidence: {
+        _id: evidence._id,
+        evidenceId: evidence.evidenceId,
+        isLocked: evidence.isLocked,
+        lockedAt: evidence.lockedAt,
+        status: evidence.status
+      }
+    });
+  } catch (error) {
+    console.error('Error locking evidence:', error);
+    res.status(500).json({ message: 'Failed to lock evidence', error: error.message });
+  }
+};
+
+// Get evidence hashes
+export const getEvidenceHashes = async (req, res) => {
   try {
     const { evidenceId } = req.params;
 
@@ -251,14 +422,16 @@ export const getEvidenceChain = async (req, res) => {
     res.json({
       evidenceId: evidence.evidenceId,
       title: evidence.title,
-      chain: evidence.evidenceChain,
-      isImmutable: evidence.isImmutable
+      sha256Hash: evidence.sha256Hash,
+      ipfsHash: evidence.ipfsHash,
+      ipfsUrl: evidence.pinataUrl,
+      blockchainHash: evidence.blockchainHash,
+      blockchainTxHash: evidence.blockchainTxHash
     });
-
   } catch (error) {
-    console.error('Error fetching evidence chain:', error);
-    res.status(500).json({ message: 'Failed to fetch evidence chain', error: error.message });
+    console.error('Error fetching hashes:', error);
+    res.status(500).json({ message: 'Failed to fetch hashes', error: error.message });
   }
 };
 
-export default { uploadEvidence, getEvidenceByCase, getEvidenceById, submitAnalysis, markImmutable, getEvidenceChain };
+export default { uploadEvidence, getEvidenceByCase, getEvidenceById, submitAnalysis, markImmutable, getEvidenceChain, verifyEvidence, lockEvidence, getEvidenceHashes };

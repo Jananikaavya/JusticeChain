@@ -88,7 +88,7 @@ router.put("/users/:id/revoke", authMiddleware, adminMiddleware, async (req, res
 router.put("/users/:id/role", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { newRole } = req.body;
-    const validRoles = ["ADMIN", "POLICE", "LAWYER", "FORENSIC", "JUDGE"];
+    const validRoles = ["ADMIN", "POLICE", "FORENSIC", "JUDGE"];
     
     if (!validRoles.includes(newRole)) {
       return res.status(400).json({ message: "Invalid role" });
@@ -228,7 +228,6 @@ router.get("/stats/users", authMiddleware, adminMiddleware, async (req, res) => 
       total: await User.countDocuments(),
       admin: await User.countDocuments({ role: "ADMIN" }),
       police: await User.countDocuments({ role: "POLICE" }),
-      lawyer: await User.countDocuments({ role: "LAWYER" }),
       forensic: await User.countDocuments({ role: "FORENSIC" }),
       judge: await User.countDocuments({ role: "JUDGE" })
     };

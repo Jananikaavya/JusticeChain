@@ -78,7 +78,7 @@ export default function Register() {
         email: "",
         password: "",
         confirmPassword: "",
-        role: "LAWYER"
+        role: "POLICE"
       });
       
       // Redirect to login after 3 seconds
@@ -176,7 +176,6 @@ export default function Register() {
             >
               <option value="ADMIN">Admin</option>
               <option value="POLICE">Police</option>
-              <option value="LAWYER">Lawyer</option>
               <option value="FORENSIC">Forensic Officer</option>
               <option value="JUDGE">Judge</option>
             </select>

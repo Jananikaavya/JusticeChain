@@ -25,7 +25,7 @@ EmailJS allows you to send emails directly from your backend without managing SM
   - `{{to_email}}` - recipient email
   - `{{user_name}}` - username
   - `{{role_id}}` - the generated Role ID
-  - `{{user_role}}` - user role (LAWYER, JUDGE, POLICE, ADMIN)
+  - `{{user_role}}` - user role (ADMIN, POLICE, FORENSIC, JUDGE)
   - `{{login_url}}` - login page URL
   
 Example template HTML:

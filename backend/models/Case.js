@@ -1,5 +1,35 @@
 import mongoose from 'mongoose';
 
+const caseTimelineSchema = new mongoose.Schema({
+  status: String,
+  timestamp: { type: Date, default: Date.now },
+  performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  notes: String
+}, { _id: false });
+
+const transferRequestSchema = new mongoose.Schema({
+  requestedAt: { type: Date, default: Date.now },
+  requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  fromStation: String,
+  toStation: String,
+  reason: String,
+  status: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    default: 'PENDING'
+  },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: Date
+}, { _id: false });
+
+const hearingSchema = new mongoose.Schema({
+  scheduledFor: { type: Date, required: true },
+  time: { type: String },
+  notes: { type: String },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: false });
+
 const caseSchema = new mongoose.Schema({
   caseId: {
     type: String,
@@ -21,14 +51,19 @@ const caseSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['REGISTERED', 'PENDING_APPROVAL', 'APPROVED', 'IN_FORENSIC_ANALYSIS', 'ANALYSIS_COMPLETE', 'HEARING', 'CLOSED'],
+    enum: ['DRAFT', 'REGISTERED', 'PENDING_APPROVAL', 'APPROVED', 'IN_FORENSIC_ANALYSIS', 'ANALYSIS_COMPLETE', 'HEARING', 'CLOSED'],
     default: 'REGISTERED'
+  },
+  isDraft: {
+    type: Boolean,
+    default: false
   },
   registeredBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
+  policeStation: String,
   assignedForensic: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -48,11 +83,51 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Evidence'
   }],
+  investigationNotes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'InvestigationNote'
+  }],
+  suspects: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Suspect'
+  }],
+  witnesses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Witness'
+  }],
+  timeline: [caseTimelineSchema],
+  transferRequest: transferRequestSchema,
+  hearingHistory: [hearingSchema],
+  verdictDecision: {
+    type: String,
+    default: null
+  },
+  verdictSummary: {
+    type: String,
+    default: null
+  },
+  verdictHtml: {
+    type: String,
+    default: null
+  },
+  verdictBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  verdictAt: {
+    type: Date,
+    default: null
+  },
   smartContractAddress: {
     type: String,
     default: null
   },
   blockchainHash: {
+    type: String,
+    default: null
+  },
+  policeIdentityHash: {
     type: String,
     default: null
   },
@@ -62,6 +137,8 @@ const caseSchema = new mongoose.Schema({
   location: {
     type: String
   },
+  latitude: Number,
+  longitude: Number,
   priority: {
     type: String,
     enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
