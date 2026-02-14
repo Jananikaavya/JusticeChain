@@ -174,7 +174,7 @@ export default function Register() {
               onChange={handleChange}
               disabled={loading}
             >
-              <option value="ADMIN">Admin</option>
+              
               <option value="POLICE">Police</option>
               <option value="FORENSIC">Forensic Officer</option>
               <option value="JUDGE">Judge</option>
