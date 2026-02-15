@@ -24,79 +24,85 @@ export default function About() {
   
 
   return (
-    <div className="space-y-16">
+    <div className="page-shell space-y-16">
+      <div className="absolute -top-16 -left-12 h-56 w-56 rounded-full bg-rose-200 page-orb animate-blob" />
+      <div className="absolute top-12 right-6 h-60 w-60 rounded-full bg-sky-200 page-orb animate-floatSlow" />
 
-      {/* INTRO */}
-      <section className="bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 text-white rounded-3xl p-12 text-center">
-        <h1 className="text-5xl font-black">About JusticeChain</h1>
-        <p className="mt-6 text-lg text-blue-100 max-w-3xl mx-auto">
+      <section className="page-hero text-center animate-slideInUp">
+        <h1 className="page-section-title text-4xl sm:text-5xl font-bold text-slate-900">About JusticeChain</h1>
+        <p className="mt-6 text-base sm:text-lg text-slate-600 max-w-3xl mx-auto">
           JusticeChain is a secure digital platform designed to modernize criminal and judicial record management
           through transparency, integrity, and accountability.
         </p>
       </section>
 
-      {/* PROBLEMS */}
       <section>
-        <h2 className="text-3xl font-bold text-center mb-8">The Problem</h2>
+        <div className="text-center mb-8">
+          <h2 className="page-section-title text-3xl font-bold text-slate-900">The Problem</h2>
+          <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
+            Legacy systems expose evidence and case records to loss, delay, and integrity risk.
+          </p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {problems.map((item, i) => (
-            <div key={i} className="bg-red-50 p-6 rounded-2xl border">
+            <div key={i} className="page-card p-6">
               <div className="text-4xl">{item.icon}</div>
-              <h3 className="font-bold mt-4">{item.title}</h3>
-              <p className="text-sm mt-2 text-gray-600">{item.description}</p>
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">{item.title}</h3>
+              <p className="text-sm mt-2 text-slate-600">{item.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* SOLUTIONS */}
       <section>
-        <h2 className="text-3xl font-bold text-center mb-8">Our Solution</h2>
+        <div className="text-center mb-8">
+          <h2 className="page-section-title text-3xl font-bold text-slate-900">Our Solution</h2>
+          <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
+            A verifiable justice workflow that protects evidence integrity and improves accountability.
+          </p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {solutions.map((item, i) => (
-            <div key={i} className="bg-green-50 p-6 rounded-2xl border">
+            <div key={i} className="page-card p-6">
               <div className="text-4xl">{item.icon}</div>
-              <h3 className="font-bold mt-4">{item.title}</h3>
-              <p className="text-sm mt-2 text-gray-600">{item.description}</p>
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">{item.title}</h3>
+              <p className="text-sm mt-2 text-slate-600">{item.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* VISION */}
-      <section className="bg-blue-50 rounded-3xl p-10">
-        <h2 className="text-3xl font-bold mb-4">System Vision</h2>
-        <p className="text-gray-700 max-w-3xl">
-          JusticeChain envisions a justice system where records are immutable, processes are transparent,
-          and trust is established through verifiable digital evidence.
+      <section className="page-card page-card-strong p-8">
+        <h2 className="page-section-title text-3xl font-bold text-slate-900 mb-4">System Vision</h2>
+        <p className="text-slate-600 max-w-3xl">
+          JusticeChain envisions a justice system where records are immutable, processes are transparent, and trust
+          is established through verifiable digital evidence.
         </p>
       </section>
 
-      {/* WORKFLOW */}
       <section>
-        <h2 className="text-3xl font-bold text-center mb-8">Case Workflow</h2>
-        <div className="space-y-6">
+        <div className="text-center mb-8">
+          <h2 className="page-section-title text-3xl font-bold text-slate-900">Case Workflow</h2>
+        </div>
+        <div className="grid gap-4">
           {workflowSteps.map((step, i) => (
-            <div key={i} className="flex items-center gap-6">
-              <div className="h-14 w-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+            <div key={i} className="page-card p-6 flex items-center gap-5">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 text-white flex items-center justify-center font-bold">
                 {step.number}
               </div>
               <div>
-                <h3 className="font-bold">{step.title}</h3>
-                <p className="text-sm text-gray-600">{step.description}</p>
+                <h3 className="text-lg font-semibold text-slate-900">{step.title}</h3>
+                <p className="text-sm text-slate-600">{step.description}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      
-      {/* CTA */}
       <section className="text-center">
-        <h2 className="text-3xl font-bold">Ready to Experience Transparent Justice?</h2>
-        <p className="text-gray-600 mt-3">Explore how JusticeChain transforms the justice system.</p>
+        <h2 className="page-section-title text-3xl font-bold text-slate-900">Ready to Experience Transparent Justice?</h2>
+        <p className="text-slate-600 mt-3">Explore how JusticeChain transforms the justice system.</p>
       </section>
-
     </div>
   )
 }

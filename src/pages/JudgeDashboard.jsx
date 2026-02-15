@@ -507,29 +507,35 @@ export default function JudgeDashboard() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <DashboardSwitcher />
-      <nav className="bg-gray-900 text-white p-4 shadow-lg">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
+    <div className="dashboard-shell min-h-screen">
+      <div className="absolute inset-0 login-bg-grid" />
+      <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-rose-200 page-orb animate-blob" />
+      <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-sky-200 page-orb animate-floatSlow" />
+      <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-emerald-200 page-orb animate-glowPulse" />
+
+      <div className="relative z-10">
+        <DashboardSwitcher />
+        <nav className="dashboard-nav animate-fadeInDown text-white p-4">
+          <div className="flex justify-between items-center max-w-7xl mx-auto">
           <div>
             <h1 className="text-2xl font-bold">Judge Dashboard</h1>
-            <p className="text-sm text-gray-300">Hearing control, evidence review, verdict drafting</p>
+            <p className="text-sm text-white/80">Hearing control, evidence review, verdict drafting</p>
           </div>
           <button
             onClick={handleLogout}
-            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition"
+            className="bg-rose-500/90 hover:bg-rose-500 px-4 py-2 rounded transition"
           >
             Logout
           </button>
-        </div>
-      </nav>
+          </div>
+        </nav>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="space-y-3">
+        <div className="max-w-7xl mx-auto p-6 space-y-6 animate-fadeInUp">
+          <div className="space-y-3">
           {toasts.map((toast) => (
             <div
               key={toast.id}
-              className={`px-4 py-3 rounded border text-sm shadow ${
+              className={`px-4 py-3 rounded-2xl border text-sm shadow ${
                 toast.type === "success"
                   ? "bg-green-100 border-green-300 text-green-800"
                   : "bg-red-100 border-red-300 text-red-800"
@@ -1120,6 +1126,7 @@ export default function JudgeDashboard() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

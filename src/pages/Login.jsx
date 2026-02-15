@@ -105,99 +105,129 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg">
-        <h2 className="text-3xl font-bold mb-2 text-center text-blue-600">
-          Justice Chain
-        </h2>
-        <h3 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          Login
-        </h3>
+    <div className="min-h-screen login-screen relative overflow-hidden">
+      <div className="absolute inset-0 login-bg-grid" />
+      <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-rose-200 login-orb animate-blob" />
+      <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-sky-200 login-orb animate-floatSlow" />
+      <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-emerald-200 login-orb animate-glowPulse" />
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-gray-700">
-            <strong>Admin:</strong> Connect your admin wallet (no username/password needed)
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          {!isAdmin && (
-            <>
-              <input
-                type="text"
-                placeholder="Username"
-                className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
-              />
-
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-
-              <input
-                type="text"
-                placeholder="Role ID (from registration email)"
-                className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
-                disabled={loading}
-              />
-            </>
-          )}
-
-          <WalletConnect onConnect={setWallet} />
-
-          {wallet && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-xs text-gray-600 break-all mb-2">
-                <strong>Connected:</strong> {wallet}
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-12">
+        <div className="w-full max-w-5xl">
+          <div className="grid gap-10 lg:grid-cols-2">
+            <div className="flex flex-col justify-center text-slate-900 animate-fadeInDown">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-700 login-chip">
+                Justice Chain
+              </span>
+              <h2 className="login-title mt-6 text-4xl font-bold leading-tight sm:text-5xl">
+                Secure, traceable access for modern investigations.
+              </h2>
+              <p className="mt-4 text-lg text-slate-600">
+                Connect your wallet, verify your role, and enter the command center with a tamper-proof identity trail.
               </p>
-              {isAdmin ? (
-                <p className="text-sm text-green-700 font-semibold">✓ Admin wallet detected!</p>
-              ) : (
-                <p className="text-sm text-orange-700">Regular user wallet</p>
-              )}
+              <div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-600">
+                <span className="rounded-full px-4 py-2 login-chip">Blockchain audit trail</span>
+                <span className="rounded-full px-4 py-2 login-chip">Role-based access</span>
+                <span className="rounded-full px-4 py-2 login-chip">Encrypted sessions</span>
+              </div>
             </div>
-          )}
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
+            <div className="login-card login-sheen rounded-3xl p-8 shadow-xl animate-fadeInUp">
+              <div className="flex items-center justify-between">
+                <h3 className="login-title text-2xl font-bold text-slate-900">Login</h3>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                  Secure Access
+                </span>
+              </div>
 
-          <p className="text-center text-gray-600 text-sm">
-            New user?{" "}
-            <span
-              onClick={() => navigate("/register")}
-              className="text-blue-600 cursor-pointer hover:underline font-semibold"
-            >
-              Register here
-            </span>
-          </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Use your wallet for admin access or enter credentials for assigned roles.
+              </p>
 
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 rounded-lg font-semibold transition"
-          >
-            Back to Home
-          </button>
+              {error && (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm text-slate-700">
+                <strong>Admin:</strong> Connect your admin wallet (no username or password needed).
+              </div>
+
+              <div className="mt-6 space-y-4">
+                {!isAdmin && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      className="login-input w-full rounded-2xl px-4 py-3 text-sm text-slate-800 focus:outline-none"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      disabled={loading}
+                    />
+
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      className="login-input w-full rounded-2xl px-4 py-3 text-sm text-slate-800 focus:outline-none"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="Role ID (from registration email)"
+                      className="login-input w-full rounded-2xl px-4 py-3 text-sm text-slate-800 focus:outline-none"
+                      value={roleId}
+                      onChange={(e) => setRoleId(e.target.value)}
+                      disabled={loading}
+                    />
+                  </>
+                )}
+
+                <WalletConnect onConnect={setWallet} />
+
+                {wallet && (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <p className="mb-2 break-all text-xs text-slate-600">
+                      <strong>Connected:</strong> {wallet}
+                    </p>
+                    {isAdmin ? (
+                      <p className="text-sm font-semibold text-emerald-700">Admin wallet detected.</p>
+                    ) : (
+                      <p className="text-sm text-orange-700">Regular user wallet.</p>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleLogin}
+                  disabled={loading}
+                  className="login-button w-full rounded-2xl py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? "Logging in..." : "Login"}
+                </button>
+
+                <p className="text-center text-sm text-slate-600">
+                  New user?{" "}
+                  <span
+                    onClick={() => navigate("/register")}
+                    className="cursor-pointer font-semibold text-sky-700 hover:underline"
+                  >
+                    Register here
+                  </span>
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+                >
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

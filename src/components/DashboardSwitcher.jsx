@@ -4,14 +4,13 @@ import { getSession, clearSession } from '../utils/auth';
 /**
  * DashboardSwitcher Component
  * 
- * This component provides role-based dashboard access.
- * It shows available dashboards based on the current user's role.
+ * This component provides admin-only dashboard navigation.
  * 
  * How it works:
- * 1. User logs in with any role (ADMIN, POLICE, FORENSIC, JUDGE)
+ * 1. Admin logs in
  * 2. ProtectedRoute ensures only authenticated users can access dashboards
  * 3. Each dashboard is restricted to its specific role
- * 4. This switcher helps navigate between dashboards (for testing)
+ * 4. This switcher is visible only to admin users
  */
 
 const DashboardSwitcher = () => {
@@ -19,6 +18,10 @@ const DashboardSwitcher = () => {
   const session = getSession();
 
   const isAdmin = session?.role === 'ADMIN';
+
+  if (!isAdmin) {
+    return null;
+  }
 
   const dashboards = [
     { role: 'ADMIN', name: '🛡️ Admin Dashboard', path: '/dashboard/admin' },

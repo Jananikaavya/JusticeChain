@@ -186,37 +186,43 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <DashboardSwitcher />
-      
-      {/* Navbar */}
-      <nav className="bg-gray-900 text-white p-4 shadow-lg">
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
+    <div className="dashboard-shell min-h-screen">
+      <div className="absolute inset-0 login-bg-grid" />
+      <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-rose-200 page-orb animate-blob" />
+      <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-sky-200 page-orb animate-floatSlow" />
+      <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-emerald-200 page-orb animate-glowPulse" />
+
+      <div className="relative z-10">
+        <DashboardSwitcher />
+        
+        {/* Navbar */}
+        <nav className="dashboard-nav animate-fadeInDown text-white p-4">
+          <div className="flex justify-between items-center max-w-7xl mx-auto">
           <div>
             <h1 className="text-2xl font-bold">⚙️ Admin Dashboard</h1>
-            <p className="text-sm text-gray-300">System Control Center</p>
+            <p className="text-sm text-white/80">System Control Center</p>
           </div>
           <button
             onClick={handleLogout}
-            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition"
+            className="bg-rose-500/90 hover:bg-rose-500 px-4 py-2 rounded transition"
           >
             Logout
           </button>
-        </div>
-      </nav>
+          </div>
+        </nav>
 
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Messages */}
-        {successMessage && (
-          <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-            {successMessage}
-          </div>
-        )}
-        {errorMessage && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {errorMessage}
-          </div>
-        )}
+        <div className="max-w-7xl mx-auto p-6 animate-fadeInUp">
+          {/* Messages */}
+          {successMessage && (
+            <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-2xl">
+              {successMessage}
+            </div>
+          )}
+          {errorMessage && (
+            <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl">
+              {errorMessage}
+            </div>
+          )}
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 border-b">
@@ -627,6 +633,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -719,10 +719,16 @@ export default function PoliceDashboard() {
   const tabs = ["Cases", "Evidence", "Investigation", "Communication", "Logs"];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200 text-slate-900">
-      <DashboardSwitcher />
-      <nav className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-white shadow-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+    <div className="dashboard-shell min-h-screen text-slate-900">
+      <div className="absolute inset-0 login-bg-grid" />
+      <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-rose-200 page-orb animate-blob" />
+      <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-sky-200 page-orb animate-floatSlow" />
+      <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-emerald-200 page-orb animate-glowPulse" />
+
+      <div className="relative z-10">
+        <DashboardSwitcher />
+        <nav className="dashboard-nav animate-fadeInDown text-white">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               JusticeChain Police Command
@@ -734,21 +740,21 @@ export default function PoliceDashboard() {
           <div className="flex items-center gap-3">
             <button
               onClick={ensureWallet}
-              className="rounded-lg bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-white/10 transition hover:bg-emerald-500"
+              className="rounded-lg bg-emerald-400/90 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 transition hover:bg-emerald-400"
             >
               {chainState.address ? "Wallet Connected" : "Connect Wallet"}
             </button>
             <button
               onClick={handleLogout}
-              className="rounded-lg bg-rose-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-white/10 transition hover:bg-rose-500"
+              className="rounded-lg bg-rose-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 transition hover:bg-rose-500"
             >
               Logout
             </button>
           </div>
-        </div>
-      </nav>
+          </div>
+        </nav>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
+        <div className="mx-auto max-w-7xl px-6 py-6 animate-fadeInUp">
         <div className="mb-6 rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.7)] backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -1496,6 +1502,7 @@ export default function PoliceDashboard() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
