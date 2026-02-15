@@ -1,50 +1,51 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { useAccount, useDisconnect } from 'wagmi';
 
 const WalletConnect = ({ onConnect }) => {
-  const [account, setAccount] = useState(null);
-  const [error, setError] = useState("");
+  const { open } = useWeb3Modal();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
 
-  const connectWallet = async () => {
-    try {
-      if (!window.ethereum) {
-        setError("MetaMask not detected. Please install MetaMask.");
-        return;
-      }
-
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-
-      setAccount(accounts[0]);
-      onConnect(accounts[0]);
-    } catch (err) {
-      console.error(err);
-      setError("Wallet connection failed.");
+  // Update parent component when wallet connects/disconnects
+  useEffect(() => {
+    if (isConnected && address) {
+      onConnect(address);
     }
+  }, [isConnected, address, onConnect]);
+
+  const handleConnect = async () => {
+    await open();
   };
 
-  // Listen for account change
-  useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on("accountsChanged", (accounts) => {
-        setAccount(accounts[0]);
-        onConnect(accounts[0]);
-      });
-    }
-  }, []);
+  const handleDisconnect = () => {
+    disconnect();
+  };
 
   return (
     <div className="w-full">
-      <button
-        onClick={connectWallet}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold"
-      >
-        {account
-          ? `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`
-          : "Connect MetaMask"}
-      </button>
-
-      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+      {isConnected ? (
+        <div className="space-y-2">
+          <button
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold"
+          >
+            Connected: {address.slice(0, 6)}...{address.slice(-4)}
+          </button>
+          <button
+            onClick={handleDisconnect}
+            className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-semibold text-sm"
+          >
+            Disconnect
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleConnect}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold"
+        >
+          Connect Wallet
+        </button>
+      )}
     </div>
   );
 };
