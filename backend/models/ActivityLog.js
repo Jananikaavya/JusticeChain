@@ -23,6 +23,7 @@ const activityLogSchema = new mongoose.Schema({
       'EVIDENCE_UPLOADED',
       'EVIDENCE_VERIFIED',
       'EVIDENCE_LOCKED',
+      'TAMPER_DETECTED',
       'NOTE_ADDED',
       'SUSPECT_ADDED',
       'WITNESS_ADDED',

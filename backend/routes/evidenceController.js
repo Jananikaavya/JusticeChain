@@ -3,11 +3,22 @@ import Case from '../models/Case.js';
 import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
 import { uploadToPinata, verifyEvidenceImmutability } from '../utils/pinataService.js';
+import { sendTamperAlertEmail } from '../utils/emailService.js';
 import crypto from 'crypto';
 import fs from 'fs';
 
+const PINATA_GATEWAY_URL = process.env.PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs/';
+
 // Helper to log activity
-const logActivity = async (userId, userRole, action, caseId, resourceId = null, description = null) => {
+const logActivity = async (
+  userId,
+  userRole,
+  action,
+  caseId,
+  resourceId = null,
+  description = null,
+  metadata = null
+) => {
   try {
     const logId = `LOG_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     await ActivityLog.create({
@@ -18,6 +29,7 @@ const logActivity = async (userId, userRole, action, caseId, resourceId = null, 
       relatedCaseId: caseId,
       relatedResourceId: resourceId,
       description,
+      metadata,
       timestamp: new Date()
     });
   } catch (error) {
@@ -28,6 +40,160 @@ const logActivity = async (userId, userRole, action, caseId, resourceId = null, 
 // Generate SHA-256 hash
 const generateSHA256 = (data) => {
   return crypto.createHash('sha256').update(data).digest('hex');
+};
+
+const resolveIpfsUrl = (evidence) => {
+  if (!evidence) return '';
+  if (evidence.pinataUrl) return evidence.pinataUrl;
+  if (evidence.pinataIpfsGatewayUrl?.startsWith('ipfs://')) {
+    return `${PINATA_GATEWAY_URL}${evidence.pinataIpfsGatewayUrl.replace('ipfs://', '')}`;
+  }
+  if (evidence.ipfsHash) return `${PINATA_GATEWAY_URL}${evidence.ipfsHash}`;
+  return '';
+};
+
+const fetchContentHashFromIpfs = async (ipfsUrl) => {
+  const response = await fetch(ipfsUrl);
+  if (!response.ok) {
+    throw new Error(`IPFS fetch failed: ${response.status}`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return generateSHA256(buffer);
+};
+
+const checkEvidenceIntegrity = async (evidence) => {
+  const ipfsUrl = resolveIpfsUrl(evidence);
+  let ipfsAvailable = false;
+  let contentHashMatches = false;
+  let computedHash = null;
+  const reasons = [];
+
+  if (!evidence?.sha256Hash) {
+    reasons.push('MISSING_SHA256');
+  }
+
+  if (ipfsUrl) {
+    try {
+      const head = await fetch(ipfsUrl, { method: 'HEAD' });
+      ipfsAvailable = head.ok;
+    } catch (error) {
+      ipfsAvailable = false;
+    }
+  }
+
+  if (!ipfsAvailable) {
+    reasons.push('IPFS_NOT_AVAILABLE');
+  } else if (evidence?.sha256Hash) {
+    try {
+      computedHash = await fetchContentHashFromIpfs(ipfsUrl);
+      contentHashMatches = computedHash === evidence.sha256Hash;
+      if (!contentHashMatches) {
+        reasons.push('CONTENT_HASH_MISMATCH');
+      }
+    } catch (error) {
+      reasons.push('IPFS_FETCH_FAILED');
+    }
+  }
+
+  return {
+    ipfsUrl,
+    ipfsAvailable,
+    contentHashMatches,
+    computedHash,
+    tamperDetected: reasons.length > 0,
+    reasons
+  };
+};
+
+const buildTamperRecipients = async (caseData, actorUserId) => {
+  const recipientIds = new Set();
+
+  if (caseData?.registeredBy) recipientIds.add(caseData.registeredBy.toString());
+  if (caseData?.assignedForensic) recipientIds.add(caseData.assignedForensic.toString());
+  if (caseData?.assignedJudge) recipientIds.add(caseData.assignedJudge.toString());
+
+  const admins = await User.find({ role: 'ADMIN' }).select('_id email role username');
+  const caseUsers = recipientIds.size
+    ? await User.find({ _id: { $in: Array.from(recipientIds) } }).select('_id email role username')
+    : [];
+
+  const combined = [...admins, ...caseUsers];
+  const uniqueById = new Map();
+
+  combined.forEach((user) => {
+    uniqueById.set(user._id.toString(), user);
+  });
+
+  if (actorUserId) {
+    uniqueById.delete(actorUserId.toString());
+  }
+
+  return Array.from(uniqueById.values());
+};
+
+const sendTamperAlerts = async ({
+  caseData,
+  evidence,
+  actorUserId,
+  actorRole,
+  reasons,
+  ipfsUrl
+}) => {
+  const recipients = await buildTamperRecipients(caseData, actorUserId);
+  if (!recipients.length) {
+    return;
+  }
+
+  const payload = {
+    caseId: caseData?.caseId || caseData?._id?.toString() || 'UNKNOWN',
+    evidenceId: evidence?.evidenceId || evidence?._id?.toString() || 'UNKNOWN',
+    title: evidence?.title || 'Evidence',
+    detectedAt: new Date().toISOString(),
+    reason: reasons.join(', '),
+    dashboardUrl: process.env.APP_DASHBOARD_URL || 'http://localhost:5173/login',
+    ipfsUrl
+  };
+
+  await Promise.all(
+    recipients
+      .filter((user) => user?.email)
+      .map((user) => sendTamperAlertEmail(user.email, payload))
+  );
+
+  if (actorUserId && actorRole) {
+    await logActivity(
+      actorUserId,
+      actorRole,
+      'TAMPER_DETECTED',
+      caseData?._id,
+      evidence?.evidenceId,
+      'Evidence integrity mismatch detected',
+      { reasons: payload.reason, ipfsUrl }
+    );
+  }
+};
+
+const markTamperDetected = async (evidence, actorUser, reasons) => {
+  const now = new Date();
+  const shouldAlert = !evidence.tamperAlertedAt;
+
+  evidence.tamperDetectedAt = now;
+  evidence.tamperReason = reasons.join(', ');
+
+  if (shouldAlert) {
+    evidence.tamperAlertedAt = now;
+    evidence.chainOfCustody.push({
+      action: 'TAMPER_DETECTED',
+      performedBy: actorUser?._id || evidence.uploadedBy,
+      performedByRole: actorUser?.role || 'SYSTEM',
+      timestamp: now,
+      details: 'Evidence integrity mismatch detected',
+      hash: evidence.sha256Hash
+    });
+  }
+
+  await evidence.save();
+  return shouldAlert;
 };
 
 // Upload evidence (Police)
@@ -314,7 +480,7 @@ export const getEvidenceChain = async (req, res) => {
   }
 };
 
-// Verify evidence (Check IPFS availability)
+// Verify evidence integrity (silent alerts on mismatch)
 export const verifyEvidence = async (req, res) => {
   try {
     const { evidenceId } = req.params;
@@ -327,10 +493,22 @@ export const verifyEvidence = async (req, res) => {
       return res.status(404).json({ message: 'Evidence not found' });
     }
 
-    // Verify on IPFS
-    const verificationResult = await verifyEvidenceImmutability(evidence.ipfsHash);
+    const caseData = await Case.findById(evidence.caseId);
+    const integrity = await checkEvidenceIntegrity(evidence);
 
-    if (verificationResult.verified) {
+    if (integrity.tamperDetected) {
+      const shouldAlert = await markTamperDetected(evidence, user, integrity.reasons);
+      if (shouldAlert) {
+        await sendTamperAlerts({
+          caseData,
+          evidence,
+          actorUserId: user?._id,
+          actorRole: user?.role,
+          reasons: integrity.reasons,
+          ipfsUrl: integrity.ipfsUrl
+        });
+      }
+    } else {
       evidence.ipfsVerified = true;
       evidence.ipfsVerifiedAt = new Date();
       evidence.chainOfCustody.push({
@@ -343,15 +521,12 @@ export const verifyEvidence = async (req, res) => {
       });
       await evidence.save();
 
-      await logActivity(userId, user.role, 'EVIDENCE_VERIFIED', evidence.caseId, evidenceId, 'IPFS verification');
+      await logActivity(userId, user.role, 'EVIDENCE_VERIFIED', evidence.caseId, evidenceId, 'Integrity verification');
     }
 
     res.json({
-      verified: verificationResult.verified,
-      ipfsHash: evidence.ipfsHash,
-      sha256Hash: evidence.sha256Hash,
-      blockchainHash: evidence.blockchainHash,
-      message: verificationResult.verified ? 'Evidence verified on IPFS' : 'Verification failed'
+      checked: true,
+      message: 'Verification completed'
     });
   } catch (error) {
     console.error('Error verifying evidence:', error);
@@ -434,4 +609,54 @@ export const getEvidenceHashes = async (req, res) => {
   }
 };
 
-export default { uploadEvidence, getEvidenceByCase, getEvidenceById, submitAnalysis, markImmutable, getEvidenceChain, verifyEvidence, lockEvidence, getEvidenceHashes };
+export const runEvidenceIntegritySweep = async () => {
+  try {
+    const limit = Number(process.env.EVIDENCE_MONITOR_LIMIT || 50);
+    const evidences = await Evidence.find({ ipfsHash: { $ne: null } })
+      .sort({ uploadedAt: -1 })
+      .limit(limit);
+
+    for (const evidence of evidences) {
+      if (evidence.tamperAlertedAt) {
+        continue;
+      }
+
+      const integrity = await checkEvidenceIntegrity(evidence);
+      if (!integrity.tamperDetected) {
+        continue;
+      }
+
+      const caseData = await Case.findById(evidence.caseId);
+      const lastEntry = evidence.chainOfCustody?.[evidence.chainOfCustody.length - 1];
+      const actorUserId = lastEntry?.performedBy || evidence.uploadedBy;
+      const actorUser = actorUserId ? await User.findById(actorUserId) : null;
+
+      const shouldAlert = await markTamperDetected(evidence, actorUser, integrity.reasons);
+      if (shouldAlert) {
+        await sendTamperAlerts({
+          caseData,
+          evidence,
+          actorUserId: actorUser?._id,
+          actorRole: actorUser?.role,
+          reasons: integrity.reasons,
+          ipfsUrl: integrity.ipfsUrl
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Evidence integrity sweep failed:', error);
+  }
+};
+
+export default {
+  uploadEvidence,
+  getEvidenceByCase,
+  getEvidenceById,
+  submitAnalysis,
+  markImmutable,
+  getEvidenceChain,
+  verifyEvidence,
+  lockEvidence,
+  getEvidenceHashes,
+  runEvidenceIntegritySweep
+};

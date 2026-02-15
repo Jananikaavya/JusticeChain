@@ -51,6 +51,53 @@ export const sendRoleIdEmail = async (email, username, roleId, role) => {
   }
 };
 
+export const sendTamperAlertEmail = async (email, payload) => {
+  try {
+    const templateId = process.env.EMAILJS_TAMPER_TEMPLATE_ID;
+    if (!process.env.EMAILJS_SERVICE_ID || !templateId || !process.env.EMAILJS_PUBLIC_KEY) {
+      console.log(`\n\u26A0\uFE0F Tamper alert email not sent (EmailJS not configured)`);
+      console.log(`   Recipient: ${email}`);
+      console.log(`   Case: ${payload.caseId} | Evidence: ${payload.evidenceId}`);
+      return true;
+    }
+
+    const templateParams = {
+      to_email: email,
+      case_id: payload.caseId,
+      evidence_id: payload.evidenceId,
+      evidence_title: payload.title,
+      detected_at: payload.detectedAt,
+      reason: payload.reason,
+      dashboard_url: payload.dashboardUrl
+    };
+
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        service_id: process.env.EMAILJS_SERVICE_ID,
+        template_id: templateId,
+        user_id: process.env.EMAILJS_PUBLIC_KEY,
+        accessToken: process.env.EMAILJS_PRIVATE_KEY,
+        template_params: templateParams
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`EmailJS Error: ${response.status} - ${errorData}`);
+    }
+
+    console.log(`\u2705 Tamper alert email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`\u26A0\uFE0F Tamper alert email error: ${error.message}`);
+    return false;
+  }
+};
+
 export const testEmailConfig = async () => {
   try {
     if (!process.env.EMAILJS_SERVICE_ID || !process.env.EMAILJS_TEMPLATE_ID || !process.env.EMAILJS_PUBLIC_KEY) {

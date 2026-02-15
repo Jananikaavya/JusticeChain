@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const chainOfCustodySchema = new mongoose.Schema({
   action: {
     type: String,
-    enum: ['UPLOADED', 'ACCESSED', 'VERIFIED', 'LOCKED', 'TRANSFERRED']
+    enum: ['UPLOADED', 'ACCESSED', 'VERIFIED', 'LOCKED', 'TRANSFERRED', 'TAMPER_DETECTED']
   },
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -133,6 +133,18 @@ const evidenceSchema = new mongoose.Schema({
     default: false
   },
   ipfsVerifiedAt: Date,
+  tamperDetectedAt: {
+    type: Date,
+    default: null
+  },
+  tamperAlertedAt: {
+    type: Date,
+    default: null
+  },
+  tamperReason: {
+    type: String,
+    default: null
+  },
   uploadedAt: {
     type: Date,
     default: Date.now

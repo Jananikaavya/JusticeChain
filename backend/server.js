@@ -12,6 +12,7 @@ import evidenceRoutes from './routes/evidenceRoutes.js';
 import { authenticateToken } from './middleware/authMiddleware.js';
 import { testEmailConfig } from './utils/emailService.js';
 import { testPinataConnection } from './utils/pinataService.js';
+import { runEvidenceIntegritySweep } from './routes/evidenceController.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -63,6 +64,9 @@ const startServer = async () => {
     const pinataOK = await testPinataConnection();
     if (pinataOK) console.log('✅ Pinata connected');
     else console.warn('⚠️ Pinata not connected');
+
+    const intervalMs = Number(process.env.EVIDENCE_MONITOR_INTERVAL_MS || 300000);
+    setInterval(runEvidenceIntegritySweep, intervalMs);
   });
 };
 

@@ -5,7 +5,8 @@ import {
   getEvidenceById, 
   submitAnalysis, 
   markImmutable, 
-  getEvidenceChain 
+  getEvidenceChain,
+  verifyEvidence
 } from './evidenceController.js';
 import multer from 'multer';
 import path from 'path';
@@ -31,6 +32,7 @@ const upload = multer({
 router.post('/upload', upload.single('file'), uploadEvidence);
 router.get('/case/:caseId', getEvidenceByCase);
 router.get('/:evidenceId', getEvidenceById);
+router.post('/verify/:evidenceId', verifyEvidence);
 router.put('/:evidenceId/analysis', submitAnalysis);
 router.put('/:evidenceId/immutable', markImmutable);
 router.get('/:evidenceId/chain', getEvidenceChain);
