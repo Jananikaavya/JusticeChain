@@ -5,13 +5,20 @@ contract JusticeChain {
 
     /* ========== ADMIN ========== */
     address public admin;
+    address public backend;
 
     constructor() {
         admin = msg.sender;
+        backend = msg.sender; // Backend can also register roles initially
     }
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin allowed");
+        _;
+    }
+
+    modifier onlyAdminOrBackend() {
+        require(msg.sender == admin || msg.sender == backend, "Only admin or backend allowed");
         _;
     }
 
@@ -30,21 +37,75 @@ contract JusticeChain {
         _;
     }
 
+    /* ========== EVENTS ========== */
+    event RoleRegistered(address indexed wallet, string role);
+    event BackendAddressUpdated(address newBackend);
+
+    /* ========== ADMIN FUNCTIONS ========== */
+    function setBackendAddress(address _backend) public onlyAdmin {
+        backend = _backend;
+        emit BackendAddressUpdated(_backend);
+    }
+
     /* ========== ROLE REGISTRY ========== */
     mapping(address => bool) public police;
     mapping(address => bool) public forensic;
     mapping(address => bool) public judge;
 
-    function registerPolice(address _addr) public onlyAdmin {
+    function registerPolice(address _addr) public onlyAdminOrBackend {
+        require(_addr != address(0), "Invalid address");
         police[_addr] = true;
+        emit RoleRegistered(_addr, "POLICE");
     }
 
-    function registerForensic(address _addr) public onlyAdmin {
+    function registerForensic(address _addr) public onlyAdminOrBackend {
+        require(_addr != address(0), "Invalid address");
         forensic[_addr] = true;
+        emit RoleRegistered(_addr, "FORENSIC");
     }
 
-    function registerJudge(address _addr) public onlyAdmin {
+    function registerJudge(address _addr) public onlyAdminOrBackend {
+        require(_addr != address(0), "Invalid address");
         judge[_addr] = true;
+        emit RoleRegistered(_addr, "JUDGE");
+    }
+
+    // Batch registration for multiple users
+    function registerMultiplePolice(address[] calldata _addresses) public onlyAdminOrBackend {
+        for (uint i = 0; i < _addresses.length; i++) {
+            require(_addresses[i] != address(0), "Invalid address");
+            police[_addresses[i]] = true;
+            emit RoleRegistered(_addresses[i], "POLICE");
+        }
+    }
+
+    function registerMultipleForensic(address[] calldata _addresses) public onlyAdminOrBackend {
+        for (uint i = 0; i < _addresses.length; i++) {
+            require(_addresses[i] != address(0), "Invalid address");
+            forensic[_addresses[i]] = true;
+            emit RoleRegistered(_addresses[i], "FORENSIC");
+        }
+    }
+
+    function registerMultipleJudge(address[] calldata _addresses) public onlyAdminOrBackend {
+        for (uint i = 0; i < _addresses.length; i++) {
+            require(_addresses[i] != address(0), "Invalid address");
+            judge[_addresses[i]] = true;
+            emit RoleRegistered(_addresses[i], "JUDGE");
+        }
+    }
+
+    // Check if wallet has any role
+    function hasAnyRole(address _addr) public view returns (bool) {
+        return police[_addr] || forensic[_addr] || judge[_addr];
+    }
+
+    // Get user's role (returns empty string if no role)
+    function getUserRole(address _addr) public view returns (string memory) {
+        if (police[_addr]) return "POLICE";
+        if (forensic[_addr]) return "FORENSIC";
+        if (judge[_addr]) return "JUDGE";
+        return "NONE";
     }
 
     /* ========== DATA STRUCTURES ========== */
