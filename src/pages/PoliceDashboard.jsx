@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { getSession, clearSession } from "../utils/auth";
+import { getSession, clearSession, getRoleVerificationStatus } from "../utils/auth";
 import DashboardSwitcher from "../components/DashboardSwitcher";
 
 const CASE_TIMELINE = [
@@ -162,6 +162,13 @@ export default function PoliceDashboard() {
     }
     fetchCases();
     fetchLogs();
+  }, [sessionState?.token]);
+
+  // Auto-verify wallet and role when dashboard loads
+  useEffect(() => {
+    if (sessionState?.token && !chainState.roleVerified && !chainState.address) {
+      ensureWallet();
+    }
   }, [sessionState?.token]);
 
   useEffect(() => {
@@ -768,7 +775,20 @@ export default function PoliceDashboard() {
               </div>
               <div>
                 <p className="font-semibold text-slate-900">Role Verified</p>
-                <p>{chainState.roleVerified ? "Yes" : "No"}</p>
+                <p className={chainState.roleVerified ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
+                  {chainState.roleVerified ? "✓ Yes" : "✗ Pending"}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p className="font-semibold text-slate-900">Blockchain Status</p>
+                <p className="text-xs text-slate-500">
+                  {(() => {
+                    const { verified, error } = getRoleVerificationStatus();
+                    if (verified) return "✓ Role verified on-chain";
+                    if (error) return `⚠️ ${error}`;
+                    return "Verifying...";
+                  })()}
+                </p>
               </div>
             </div>
           </div>

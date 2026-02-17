@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import WalletConnect from "../components/WalletConnect";
-import { setSession } from "../utils/auth";
+import { setSession, verifyRoleOnBlockchain } from "../utils/auth";
 
 const ADMIN_WALLET = "0x7f1F93f7d1F58AC2644A28b74bd3063123C25CdD"; // Admin wallet address
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/+$/, "");
@@ -17,6 +17,7 @@ export default function Login() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   // Update isAdmin state when wallet changes
   useEffect(() => {
@@ -89,6 +90,16 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(data.user));
       
       setSession({ ...data.user, token: data.token });
+
+      // Verify role on blockchain
+      setVerifying(true);
+      const verification = await verifyRoleOnBlockchain(data.user.wallet, data.user.role);
+      setVerifying(false);
+
+      if (!verification.verified) {
+        console.warn("⚠️ Role verification warning:", verification.error);
+        // Don't block login, but warn user
+      }
 
       // Redirect by role
       if (data.user.role === "ADMIN") navigate("/dashboard/admin");

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { getSession, clearSession } from "../utils/auth";
+import { getSession, clearSession, getRoleVerificationStatus } from "../utils/auth";
 import DashboardSwitcher from "../components/DashboardSwitcher";
 
 const TABS = ["Cases", "Evidence", "Reports", "Verification", "Logs"];
@@ -134,6 +134,13 @@ export default function ForensicDashboard() {
       return;
     }
     fetchCases();
+  }, [sessionState?.token]);
+
+  // Auto-verify wallet and role when dashboard loads
+  useEffect(() => {
+    if (sessionState?.token && !chainState.roleVerified && !chainState.address) {
+      ensureWallet();
+    }
   }, [sessionState?.token]);
 
   useEffect(() => {
