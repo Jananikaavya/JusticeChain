@@ -4,7 +4,8 @@ import WalletConnect from "../components/WalletConnect";
 import { setSession } from "../utils/auth";
 
 const ADMIN_WALLET = "0x7f1F93f7d1F58AC2644A28b74bd3063123C25CdD"; // Admin wallet address
-const API_URL = 'http://localhost:5000/api/auth';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/+$/, "");
+const API_URL = `${API_BASE_URL}/api/auth`;
 
 export default function Login() {
   const navigate = useNavigate();
