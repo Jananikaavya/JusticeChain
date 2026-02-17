@@ -2,10 +2,7 @@ import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendRoleIdEmail } from '../utils/emailService.js';
-import { initBlockchain, registerRoleOnBlockchain } from '../utils/blockchainService.js';
 import dotenv from 'dotenv';
-
-// Build trigger: 2026-02-17T19:40:00Z - Force Vercel rebuild with web3
 
 dotenv.config();
 
@@ -62,7 +59,7 @@ export const register = async (req, res) => {
 
     await newUser.save();
 
-    // Register role on blockchain
+    // Register role on blockchain (dynamically imported to handle missing web3)
     try {
       const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
       const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
@@ -70,6 +67,9 @@ export const register = async (req, res) => {
       if (!contractAddress || !adminPrivateKey) {
         console.warn('⚠️ Blockchain config missing. Skipping on-chain registration.');
       } else {
+        // Dynamic import to avoid loading web3 until needed
+        const { initBlockchain, registerRoleOnBlockchain } = await import('../utils/blockchainService.js');
+        
         // Initialize blockchain service
         initBlockchain(contractAddress, 'sepolia', adminPrivateKey);
         
