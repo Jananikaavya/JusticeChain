@@ -2,7 +2,6 @@ import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendRoleIdEmail } from '../utils/emailService.js';
-import { initBlockchain, registerRoleOnBlockchain } from '../utils/blockchainService.js';
 
 // Generate unique Role ID
 const generateRoleId = (role) => {
@@ -45,25 +44,7 @@ export const register = async (req, res) => {
     // Generate Role ID
     const roleId = generateRoleId(normalizedRole);
 
-    const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '';
-    const network = process.env.BLOCKCHAIN_NETWORK || 'sepolia';
-    const adminKey = process.env.ADMIN_PRIVATE_KEY || '';
-
-    if (!contractAddress || !adminKey) {
-      return res.status(500).json({ message: 'Blockchain configuration is missing' });
-    }
-
-    const blockchainReady = initBlockchain(contractAddress, network, adminKey);
-    if (!blockchainReady) {
-      return res.status(500).json({ message: 'Blockchain initialization failed' });
-    }
-
-    const registerResult = await registerRoleOnBlockchain(normalizedRole, wallet, adminKey);
-    if (!registerResult.success) {
-      return res.status(502).json({ message: 'On-chain role registration failed', error: registerResult.error });
-    }
-
-    // Create new user
+    // Create new user with wallet
     const newUser = new User({
       username,
       email,
@@ -76,16 +57,17 @@ export const register = async (req, res) => {
     await newUser.save();
 
     // Send role ID via email
-    await sendRoleIdEmail(email, username, roleId, role);
+    await sendRoleIdEmail(email, username, roleId, normalizedRole);
 
     res.status(201).json({
-      message: 'Registration successful! Check your email for Role ID',
+      message: 'Registration successful! Check your email for Role ID. Admin will register your wallet on-chain.',
       user: {
         id: newUser._id,
         username: newUser.username,
         email: newUser.email,
         role: newUser.role,
-        roleId: newUser.roleId
+        roleId: newUser.roleId,
+        wallet: newUser.wallet
       }
     });
   } catch (error) {
