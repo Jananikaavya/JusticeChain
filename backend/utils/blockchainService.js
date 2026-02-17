@@ -1,8 +1,20 @@
 import Web3 from 'web3';
 import dotenv from 'dotenv';
-import contractABI from './JusticeChainABI.json' assert { type: 'json' };
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const contractABIPath = join(__dirname, './JusticeChainABI.json');
+let contractABI;
+try {
+  contractABI = JSON.parse(readFileSync(contractABIPath, 'utf-8'));
+} catch (error) {
+  console.warn('⚠️ Could not load JusticeChainABI.json:', error.message);
+  contractABI = [];
+}
 
 // Initialize Web3 - will be configured after contract deployment
 let web3;
