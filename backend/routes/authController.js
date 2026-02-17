@@ -60,12 +60,14 @@ export const register = async (req, res) => {
     await newUser.save();
 
     // Register role on blockchain (dynamically imported to handle missing web3)
+    let blockchainStatus = { success: false, transactionHash: null, error: 'Not attempted' };
     try {
       const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
       const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
       
       if (!contractAddress || !adminPrivateKey) {
-        console.warn('⚠️ Blockchain config missing. Skipping on-chain registration.');
+        blockchainStatus = { success: false, error: 'Blockchain config missing - admin will need to register manually' };
+        console.warn('⚠️ Blockchain config missing. Wallet will need manual registration.');
       } else {
         // Dynamic import to avoid loading web3 until needed
         const { initBlockchain, registerRoleOnBlockchain } = await import('../utils/blockchainService.js');
@@ -77,12 +79,27 @@ export const register = async (req, res) => {
         const blockchainResult = await registerRoleOnBlockchain(normalizedRole, wallet, adminPrivateKey);
         
         if (blockchainResult.success) {
+          blockchainStatus = { 
+            success: true, 
+            transactionHash: blockchainResult.transactionHash,
+            message: `✅ User ${username} registered on-chain`
+          };
           console.log(`✅ User ${username} registered on-chain. TX: ${blockchainResult.transactionHash}`);
         } else {
+          blockchainStatus = { 
+            success: false, 
+            error: blockchainResult.error,
+            message: `Failed to register on-chain: ${blockchainResult.error}`
+          };
           console.warn(`⚠️ On-chain registration failed for ${username}: ${blockchainResult.error}`);
         }
       }
     } catch (blockchainError) {
+      blockchainStatus = { 
+        success: false, 
+        error: blockchainError.message,
+        message: `Blockchain error: ${blockchainError.message}`
+      };
       console.error('❌ Blockchain registration error:', blockchainError.message);
       // Don't fail the signup - user is still registered in database
     }
@@ -92,6 +109,7 @@ export const register = async (req, res) => {
 
     res.status(201).json({
       message: 'Registration successful! Check your email for Role ID.',
+      blockchainStatus,
       user: {
         id: newUser._id,
         username: newUser.username,
