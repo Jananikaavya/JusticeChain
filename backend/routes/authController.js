@@ -231,6 +231,9 @@ export const registerUserOnBlockchain = async (req, res) => {
       return res.status(400).json({ message: 'Admin private key not configured' });
     }
 
+    console.log(`🔗 Registering ${normalizedRole} on contract: ${contractAddress}`);
+    console.log(`👤 Wallet: ${walletAddress}`);
+
     // Import and initialize blockchain service
     const { initBlockchain, registerRoleOnBlockchain } = await import('../utils/blockchainService.js');
     
@@ -240,23 +243,93 @@ export const registerUserOnBlockchain = async (req, res) => {
     const result = await registerRoleOnBlockchain(normalizedRole, walletAddress, adminPrivateKey);
 
     if (!result.success) {
+      console.error(`❌ Registration failed: ${result.error}`);
       return res.status(500).json({ 
         message: 'Failed to register user on blockchain',
         error: result.error 
       });
     }
 
+    console.log(`✅ Successfully registered ${normalizedRole}: ${walletAddress}`);
+    console.log(`📝 Transaction Hash: ${result.transactionHash}`);
+
     res.status(200).json({
       message: `User wallet registered as ${normalizedRole} on blockchain`,
       transactionHash: result.transactionHash,
       wallet: walletAddress,
-      role: normalizedRole
+      role: normalizedRole,
+      contractAddress: contractAddress
     });
   } catch (error) {
     console.error('Blockchain registration error:', error);
     res.status(500).json({ 
       message: 'Error registering user on blockchain',
       error: error.message 
+    });
+  }
+};
+
+// Instant verification - verify role on blockchain immediately
+export const verifyRoleOnchain = async (req, res) => {
+  try {
+    const { walletAddress, role } = req.body;
+
+    if (!walletAddress || !role) {
+      return res.status(400).json({ message: 'Wallet address and role required' });
+    }
+
+    const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
+    const normalizedRole = String(role).toUpperCase();
+
+    const Web3 = (await import('web3')).default;
+    const web3 = new Web3('https://sepolia.infura.io/v3/59fdc70c62514158a761187b8c0988a7');
+
+    // Simple ABI for role functions
+    const roleABI = [
+      'function police(address) view returns (bool)',
+      'function forensic(address) view returns (bool)',
+      'function judge(address) view returns (bool)',
+      'function getUserRole(address) view returns (string)'
+    ];
+
+    const contract = new web3.eth.Contract(roleABI, contractAddress);
+
+    const roleMethodMap = {
+      POLICE: 'police',
+      FORENSIC: 'forensic',
+      JUDGE: 'judge'
+    };
+
+    const methodName = roleMethodMap[normalizedRole];
+    if (!methodName) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+
+    // Check if wallet has role
+    const hasRole = await contract.methods[methodName](walletAddress).call();
+    
+    // Get user's role
+    let userRole = 'NONE';
+    try {
+      userRole = await contract.methods.getUserRole(walletAddress).call();
+    } catch (e) {
+      console.warn('Could not fetch getUserRole, using fallback');
+    }
+
+    res.status(200).json({
+      verified: hasRole,
+      walletAddress,
+      role: normalizedRole,
+      userRole,
+      message: hasRole 
+        ? `✅ Wallet is registered as ${normalizedRole}` 
+        : `❌ Wallet is NOT registered as ${normalizedRole}. Current role: ${userRole}`
+    });
+  } catch (error) {
+    console.error('Verification error:', error);
+    res.status(500).json({
+      message: 'Error verifying role',
+      error: error.message
     });
   }
 };
