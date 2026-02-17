@@ -27,9 +27,7 @@ const SUSPECT_STATUSES = ["UNDER_WATCH", "ARRESTED", "RELEASED"];
 const AI_TAGS = ["face", "weapon", "vehicle"];
 
 const CONTRACT_ABI = [
-  "function registerCase(string caseId, address policeWallet)",
-  "function addEvidence(string caseId, string ipfsHash, string evidenceHash)",
-  "function policeRoleHash() view returns (bytes32)"
+  "function police(address) view returns (bool)"
 ];
 
 const DEFAULT_FORM = {
@@ -244,7 +242,7 @@ export default function PoliceDashboard() {
       ? new ethers.Contract(contractAddress, CONTRACT_ABI, signer)
       : null;
 
-    const roleVerified = await verifyPoliceRole(contract);
+    const roleVerified = await verifyPoliceRole(contract, address);
 
     setChainState({
       provider,
@@ -261,14 +259,12 @@ export default function PoliceDashboard() {
     return { provider, signer, address, contract, roleVerified };
   };
 
-  const verifyPoliceRole = async (contract) => {
+  const verifyPoliceRole = async (contract, address) => {
     try {
-      if (!contract) {
+      if (!contract || !address) {
         return false;
       }
-      const onChainHash = await contract.policeRoleHash();
-      const expectedHash = ethers.id("POLICE");
-      return onChainHash.toLowerCase() === expectedHash.toLowerCase();
+      return await contract.police(address);
     } catch (error) {
       console.error("Role verification failed:", error);
       return false;
