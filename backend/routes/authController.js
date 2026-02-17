@@ -2,6 +2,10 @@ import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendRoleIdEmail } from '../utils/emailService.js';
+import { initBlockchain, registerRoleOnBlockchain } from '../utils/blockchainService.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Generate unique Role ID
 const generateRoleId = (role) => {
@@ -56,11 +60,36 @@ export const register = async (req, res) => {
 
     await newUser.save();
 
+    // Register role on blockchain
+    try {
+      const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
+      const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
+      
+      if (!contractAddress || !adminPrivateKey) {
+        console.warn('⚠️ Blockchain config missing. Skipping on-chain registration.');
+      } else {
+        // Initialize blockchain service
+        initBlockchain(contractAddress, 'sepolia', adminPrivateKey);
+        
+        // Register user role on-chain
+        const blockchainResult = await registerRoleOnBlockchain(normalizedRole, wallet, adminPrivateKey);
+        
+        if (blockchainResult.success) {
+          console.log(`✅ User ${username} registered on-chain. TX: ${blockchainResult.transactionHash}`);
+        } else {
+          console.warn(`⚠️ On-chain registration failed for ${username}: ${blockchainResult.error}`);
+        }
+      }
+    } catch (blockchainError) {
+      console.error('❌ Blockchain registration error:', blockchainError.message);
+      // Don't fail the signup - user is still registered in database
+    }
+
     // Send role ID via email
     await sendRoleIdEmail(email, username, roleId, normalizedRole);
 
     res.status(201).json({
-      message: 'Registration successful! Check your email for Role ID. Admin will register your wallet on-chain.',
+      message: 'Registration successful! Check your email for Role ID.',
       user: {
         id: newUser._id,
         username: newUser.username,
