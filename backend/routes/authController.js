@@ -62,12 +62,12 @@ export const register = async (req, res) => {
     // Register role on blockchain (dynamically imported to handle missing web3)
     let blockchainStatus = { success: false, transactionHash: null, error: 'Not attempted' };
     try {
-      const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
+      const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
       const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
       
-      if (!contractAddress || !adminPrivateKey) {
-        blockchainStatus = { success: false, error: 'Blockchain config missing - admin will need to register manually' };
-        console.warn('⚠️ Blockchain config missing. Wallet will need manual registration.');
+      if (!adminPrivateKey) {
+        blockchainStatus = { success: false, error: 'Admin private key not configured' };
+        console.warn('⚠️ Admin private key missing. Wallet will need manual registration.');
       } else {
         // Dynamic import to avoid loading web3 until needed
         const { initBlockchain, registerRoleOnBlockchain } = await import('../utils/blockchainService.js');
@@ -223,11 +223,12 @@ export const registerUserOnBlockchain = async (req, res) => {
       return res.status(400).json({ message: 'Invalid role. Must be POLICE, FORENSIC, or JUDGE' });
     }
 
-    const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
+    // Use env vars with fallbacks
+    const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
     const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
 
-    if (!contractAddress || !adminPrivateKey) {
-      return res.status(400).json({ message: 'Blockchain configuration missing' });
+    if (!adminPrivateKey) {
+      return res.status(400).json({ message: 'Admin private key not configured' });
     }
 
     // Import and initialize blockchain service

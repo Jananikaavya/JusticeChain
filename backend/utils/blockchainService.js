@@ -8,6 +8,11 @@ dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contractABIPath = join(__dirname, './JusticeChainABI.json');
+
+// Fallback to hardcoded contract address if env var is missing
+const DEFAULT_CONTRACT_ADDRESS = '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
+const DEFAULT_INFURA_KEY = '59fdc70c62514158a761187b8c0988a7';
+
 let contractABI;
 try {
   contractABI = JSON.parse(readFileSync(contractABIPath, 'utf-8'));
@@ -25,7 +30,7 @@ let contractAddress;
 const BLOCKCHAIN_CONFIG = {
   // Ethereum Sepolia Testnet
   sepolia: {
-    rpcUrl: 'https://sepolia.infura.io/v3/' + (process.env.INFURA_API_KEY || ''),
+    rpcUrl: 'https://sepolia.infura.io/v3/' + (process.env.INFURA_API_KEY || DEFAULT_INFURA_KEY),
     chainId: 11155111,
     networkName: 'Ethereum Sepolia Testnet'
   },
@@ -39,7 +44,7 @@ const BLOCKCHAIN_CONFIG = {
 
 /**
  * Initialize blockchain service with contract address and network
- * @param {string} address - Smart contract address
+ * @param {string} address - Smart contract address (optional, uses default if not provided)
  * @param {string} network - Network name: 'sepolia' or 'mumbai'
  * @param {string} privateKey - Private key for signing transactions
  */
@@ -51,7 +56,10 @@ function initBlockchain(address, network = 'sepolia', privateKey) {
 
     const config = BLOCKCHAIN_CONFIG[network];
     web3 = new Web3(new Web3.providers.HttpProvider(config.rpcUrl));
-    contractAddress = address;
+    
+    // Use provided address or fallback to default
+    contractAddress = address || DEFAULT_CONTRACT_ADDRESS;
+    console.log(`📌 Using contract address: ${contractAddress}`);
 
     // Load contract ABI
     if (!contractABI || !Array.isArray(contractABI)) {

@@ -58,7 +58,9 @@ export const verifyRoleOnBlockchain = async (walletAddress, role) => {
       return { verified: false, error: "Missing wallet or role" };
     }
 
-    const contractAddress = import.meta.env.VITE_JUSTICECHAIN_CONTRACT;
+    // Use env var with fallback
+    const contractAddress = import.meta.env.VITE_JUSTICECHAIN_CONTRACT || '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
+    
     if (!contractAddress) {
       return { verified: false, error: "Contract address not configured" };
     }
