@@ -5,6 +5,8 @@ import { sendRoleIdEmail } from '../utils/emailService.js';
 import { initBlockchain, registerRoleOnBlockchain } from '../utils/blockchainService.js';
 import dotenv from 'dotenv';
 
+// Build trigger: 2026-02-17T19:40:00Z - Force Vercel rebuild with web3
+
 dotenv.config();
 
 // Generate unique Role ID
