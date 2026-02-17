@@ -184,3 +184,61 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({ message: 'Error fetching users', error: error.message });
   }
 };
+
+// Admin: Register user wallet on blockchain
+export const registerUserOnBlockchain = async (req, res) => {
+  try {
+    const { walletAddress, role } = req.body;
+
+    // Validation
+    if (!walletAddress || !role) {
+      return res.status(400).json({ message: 'Wallet address and role are required' });
+    }
+
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return res.status(400).json({ message: 'Invalid wallet address format' });
+    }
+
+    const normalizedRole = String(role).toUpperCase();
+    const allowedRoles = new Set(['POLICE', 'FORENSIC', 'JUDGE']);
+    if (!allowedRoles.has(normalizedRole)) {
+      return res.status(400).json({ message: 'Invalid role. Must be POLICE, FORENSIC, or JUDGE' });
+    }
+
+    const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
+    const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
+
+    if (!contractAddress || !adminPrivateKey) {
+      return res.status(400).json({ message: 'Blockchain configuration missing' });
+    }
+
+    // Import and initialize blockchain service
+    const { initBlockchain, registerRoleOnBlockchain } = await import('../utils/blockchainService.js');
+    
+    initBlockchain(contractAddress, 'sepolia', adminPrivateKey);
+    
+    // Register user on-chain
+    const result = await registerRoleOnBlockchain(normalizedRole, walletAddress, adminPrivateKey);
+
+    if (!result.success) {
+      return res.status(500).json({ 
+        message: 'Failed to register user on blockchain',
+        error: result.error 
+      });
+    }
+
+    res.status(200).json({
+      message: `User wallet registered as ${normalizedRole} on blockchain`,
+      transactionHash: result.transactionHash,
+      wallet: walletAddress,
+      role: normalizedRole
+    });
+  } catch (error) {
+    console.error('Blockchain registration error:', error);
+    res.status(500).json({ 
+      message: 'Error registering user on blockchain',
+      error: error.message 
+    });
+  }
+};
+
