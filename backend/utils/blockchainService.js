@@ -342,6 +342,55 @@ async function getCaseFromBlockchain(caseId) {
   }
 }
 
+/**
+ * Register a role for a wallet on-chain (admin only)
+ * @param {string} role - POLICE | FORENSIC | JUDGE
+ * @param {string} walletAddress - User wallet address
+ * @param {string} privateKey - Admin private key for signing
+ */
+async function registerRoleOnBlockchain(role, walletAddress, privateKey) {
+  try {
+    if (!contract) throw new Error('Blockchain not initialized');
+
+    const methodMap = {
+      POLICE: 'registerPolice',
+      FORENSIC: 'registerForensic',
+      JUDGE: 'registerJudge'
+    };
+
+    const methodName = methodMap[String(role || '').toUpperCase()];
+    if (!methodName) throw new Error('Unsupported role');
+
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    const method = contract.methods[methodName](walletAddress);
+
+    const gas = await method.estimateGas({ from: account.address });
+
+    const tx = {
+      from: account.address,
+      to: contractAddress,
+      data: method.encodeABI(),
+      gas: Math.ceil(gas * 1.2),
+      gasPrice: await web3.eth.getGasPrice(),
+      chainId: process.env.CHAIN_ID || 11155111
+    };
+
+    const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+    return {
+      success: true,
+      transactionHash: receipt.transactionHash
+    };
+  } catch (error) {
+    console.error('❌ Error registering role on blockchain:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   initBlockchain,
   createCaseOnBlockchain,
@@ -349,6 +398,7 @@ module.exports = {
   submitForensicReportOnBlockchain,
   giveVerdictOnBlockchain,
   logAccessOnBlockchain,
+  registerRoleOnBlockchain,
   verifyEvidenceOnBlockchain,
   getCaseFromBlockchain,
   web3,

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import WalletConnect from "../components/WalletConnect";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/+$/, "");
 const API_URL = `${API_BASE_URL}/api/auth`;
@@ -18,6 +19,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [successRoleId, setSuccessRoleId] = useState("");
+  const [wallet, setWallet] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,6 +36,11 @@ export default function Register() {
     // Validation
     if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("Please fill in all fields");
+      return;
+    }
+
+    if (!wallet) {
+      setError("Please connect MetaMask to register.");
       return;
     }
 
@@ -60,7 +67,8 @@ export default function Register() {
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          role: formData.role
+          role: formData.role,
+          wallet
         })
       });
 
@@ -81,6 +89,7 @@ export default function Register() {
         confirmPassword: "",
         role: "POLICE"
       });
+      setWallet("");
       
       // Redirect to login after 3 seconds
       setTimeout(() => {
@@ -229,6 +238,16 @@ export default function Register() {
                         disabled={loading}
                         required
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 font-semibold mb-2">Connect Wallet</label>
+                      <WalletConnect onConnect={setWallet} />
+                      {wallet && (
+                        <p className="mt-2 text-xs text-slate-500 break-all">
+                          Connected: {wallet}
+                        </p>
+                      )}
                     </div>
 
                     <button

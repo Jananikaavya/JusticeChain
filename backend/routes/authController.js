@@ -1,7 +1,11 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { createRequire } from 'module';
 import { sendRoleIdEmail } from '../utils/emailService.js';
+
+const require = createRequire(import.meta.url);
+const { initBlockchain, registerRoleOnBlockchain } = require('../utils/blockchainService.js');
 
 // Generate unique Role ID
 const generateRoleId = (role) => {
@@ -14,11 +18,21 @@ const generateRoleId = (role) => {
 // Register new user
 export const register = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, wallet } = req.body;
 
     // Validation
-    if (!username || !email || !password || !role) {
+    if (!username || !email || !password || !role || !wallet) {
       return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+      return res.status(400).json({ message: 'Invalid wallet address' });
+    }
+
+    const normalizedRole = String(role).toUpperCase();
+    const allowedRoles = new Set(['POLICE', 'FORENSIC', 'JUDGE']);
+    if (!allowedRoles.has(normalizedRole)) {
+      return res.status(400).json({ message: 'Invalid role selection' });
     }
 
     // Check if username already exists (email can be reused)
@@ -32,15 +46,34 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Generate Role ID
-    const roleId = generateRoleId(role);
+    const roleId = generateRoleId(normalizedRole);
+
+    const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '';
+    const network = process.env.BLOCKCHAIN_NETWORK || 'sepolia';
+    const adminKey = process.env.ADMIN_PRIVATE_KEY || '';
+
+    if (!contractAddress || !adminKey) {
+      return res.status(500).json({ message: 'Blockchain configuration is missing' });
+    }
+
+    const blockchainReady = initBlockchain(contractAddress, network, adminKey);
+    if (!blockchainReady) {
+      return res.status(500).json({ message: 'Blockchain initialization failed' });
+    }
+
+    const registerResult = await registerRoleOnBlockchain(normalizedRole, wallet, adminKey);
+    if (!registerResult.success) {
+      return res.status(502).json({ message: 'On-chain role registration failed', error: registerResult.error });
+    }
 
     // Create new user
     const newUser = new User({
       username,
       email,
       password: hashedPassword,
-      role,
-      roleId
+      role: normalizedRole,
+      roleId,
+      wallet
     });
 
     await newUser.save();
