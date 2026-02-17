@@ -1,11 +1,8 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { createRequire } from 'module';
 import { sendRoleIdEmail } from '../utils/emailService.js';
-
-const require = createRequire(import.meta.url);
-const { initBlockchain, registerRoleOnBlockchain } = require('../utils/blockchainService.js');
+import { initBlockchain, registerRoleOnBlockchain } from '../utils/blockchainService.js';
 
 // Generate unique Role ID
 const generateRoleId = (role) => {

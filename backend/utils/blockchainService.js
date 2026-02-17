@@ -1,11 +1,13 @@
-const Web3 = require('web3');
-require('dotenv').config();
+import Web3 from 'web3';
+import dotenv from 'dotenv';
+import contractABI from './JusticeChainABI.json' assert { type: 'json' };
+
+dotenv.config();
 
 // Initialize Web3 - will be configured after contract deployment
 let web3;
 let contract;
 let contractAddress;
-const contractABI = require('./JusticeChainABI.json'); // You'll get this from Remix
 
 // Configuration for blockchain service
 const BLOCKCHAIN_CONFIG = {
@@ -391,7 +393,7 @@ async function registerRoleOnBlockchain(role, walletAddress, privateKey) {
   }
 }
 
-module.exports = {
+export {
   initBlockchain,
   createCaseOnBlockchain,
   addEvidenceOnBlockchain,
