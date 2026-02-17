@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const contractABIPath = join(__dirname, './JusticeChainABI.json');
 
 // Fallback to hardcoded contract address if env var is missing
-const DEFAULT_CONTRACT_ADDRESS = '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
+const DEFAULT_CONTRACT_ADDRESS = '0x3455F3f93bf486222880Bd64Ecd2B5b9F2FbD5aa';
 const DEFAULT_INFURA_KEY = '59fdc70c62514158a761187b8c0988a7';
 
 let contractABI;

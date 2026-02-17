@@ -62,7 +62,7 @@ export const register = async (req, res) => {
     // Register role on blockchain (dynamically imported to handle missing web3)
     let blockchainStatus = { success: false, transactionHash: null, error: 'Not attempted' };
     try {
-      const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '0x1e9Dd6b8743eD4b7d3965ef878db9C7B1e602801';
+      const contractAddress = process.env.SMART_CONTRACT_ADDRESS || '0x3455F3f93bf486222880Bd64Ecd2B5b9F2FbD5aa';
       const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
       
       if (!adminPrivateKey) {
