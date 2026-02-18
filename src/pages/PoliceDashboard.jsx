@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import axios from "axios";
 import { toast } from "react-toastify";
+import { getSession, clearSession, getRoleVerificationStatus } from "../utils/auth";
+import DashboardSwitcher from "../components/DashboardSwitcher";
 import "react-toastify/dist/ReactToastify.css";
 
-const API = "http://localhost:5000/api";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, "");
+const API_URL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
 
 export default function PoliceDashboard() {
-  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const [session, setSession] = useState(() => getSession());
   const [wallet, setWallet] = useState("");
   const [roleVerified, setRoleVerified] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,23 +26,46 @@ export default function PoliceDashboard() {
     status: "DRAFT"
   });
 
-  const token = localStorage.getItem("token");
-
   /* -------------------- INIT -------------------- */
   useEffect(() => {
+    setSession(getSession());
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      navigate("/login");
+      return;
+    }
+    if (!session?.token) {
+      setLoading(false);
+      return;
+    }
     loadUser();
     connectWallet();
-  }, []);
+  }, [session?.token]);
 
   const loadUser = async () => {
     try {
-      const res = await axios.get(`${API}/auth/user/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await fetch(`${API_URL}/auth/user/me`, {
+        headers: { Authorization: `Bearer ${session.token}` }
       });
-      setUser(res.data.user);
-      checkRoleOnChain(res.data.user.wallet, res.data.user.role);
-    } catch {
-      toast.error("Session expired");
+      
+      if (!response.ok) {
+        throw new Error('Failed to load user');
+      }
+      
+      const data = await response.json();
+      
+      // Verify role on blockchain
+      if (data.user?.wallet && data.user?.role) {
+        await checkRoleOnChain(data.user.wallet, data.user.role);
+      }
+      
+      fetchCases();
+    } catch (error) {
+      toast.error("Session expired or failed to load user");
+      clearSession();
+      navigate("/login");
     } finally {
       setLoading(false);
     }
@@ -47,30 +74,64 @@ export default function PoliceDashboard() {
   /* -------------------- WALLET -------------------- */
   const connectWallet = async () => {
     if (!window.ethereum) return toast.error("Install MetaMask");
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const accounts = await provider.send("eth_requestAccounts", []);
-    setWallet(accounts[0]);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      setWallet(accounts[0]);
+    } catch (error) {
+      toast.error("Failed to connect wallet");
+    }
   };
 
   /* -------------------- BLOCKCHAIN VERIFY -------------------- */
   const checkRoleOnChain = async (walletAddress, role) => {
     try {
-      const res = await axios.post(`${API}/auth/verify-role-onchain`, {
-        walletAddress,
-        role
+      const response = await fetch(`${API_URL}/auth/check-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify({
+          wallet: walletAddress,
+          role: role
+        })
       });
-      setRoleVerified(res.data.verified);
-    } catch {
-      toast.error("Blockchain verification failed");
+
+      if (!response.ok) {
+        console.warn("Role verification endpoint not available");
+        setRoleVerified(false);
+        return;
+      }
+
+      const data = await response.json();
+      setRoleVerified(data.verified || false);
+      
+      if (data.verified) {
+        toast.success("✓ Police role verified on blockchain");
+      } else {
+        toast.warning("⚠️ Police role not yet verified on blockchain");
+      }
+    } catch (error) {
+      console.warn("Blockchain verification failed:", error.message);
+      setRoleVerified(false);
     }
   };
 
   /* -------------------- CASES -------------------- */
   const fetchCases = async () => {
-    const res = await axios.get(`${API}/cases`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setCases(res.data);
+    try {
+      const response = await fetch(`${API_URL}/cases`, {
+        headers: { Authorization: `Bearer ${session.token}` }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch cases');
+      
+      const data = await response.json();
+      setCases(data.cases || []);
+    } catch (error) {
+      toast.error("Failed to load cases");
+    }
   };
 
   const createCase = async (mode) => {
@@ -78,14 +139,28 @@ export default function PoliceDashboard() {
       return toast.warning("Blockchain verification required");
 
     try {
-      await axios.post(
-        `${API}/cases`,
-        { ...newCase, status: mode },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await fetch(`${API_URL}/cases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify({ ...newCase, status: mode })
+      });
+
+      if (!response.ok) throw new Error('Failed to create case');
+
       toast.success(`Case ${mode === "DRAFT" ? "saved" : "submitted"}`);
+      setNewCase({
+        title: "",
+        caseNumber: "",
+        description: "",
+        location: "",
+        priority: "LOW",
+        status: "DRAFT"
+      });
       fetchCases();
-    } catch {
+    } catch (error) {
       toast.error("Failed to create case");
     }
   };
@@ -99,11 +174,16 @@ export default function PoliceDashboard() {
     formData.append("caseId", caseId);
 
     try {
-      await axios.post(`${API}/evidence/upload`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await fetch(`${API_URL}/evidence/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.token}` },
+        body: formData
       });
+
+      if (!response.ok) throw new Error('Upload failed');
+
       toast.success("Evidence uploaded to IPFS + Blockchain");
-    } catch {
+    } catch (error) {
       toast.error("Evidence upload failed");
     }
   };

@@ -98,8 +98,8 @@ async function createCaseOnBlockchain(policeAddress, privateKey) {
       from: account.address,
       to: contractAddress,
       data: contract.methods.createCase().encodeABI(),
-      gas: Math.ceil(gas * 1.2), // Add 20% buffer
-      gasPrice: await web3.eth.getGasPrice(),
+      gas: Math.ceil(Number(gas) * 1.2), // Add 20% buffer
+      gasPrice: Number(await web3.eth.getGasPrice()),
       chainId: process.env.CHAIN_ID || 11155111
     };
 
@@ -148,8 +148,8 @@ async function addEvidenceOnBlockchain(caseId, ipfsHash, policeAddress, privateK
       from: account.address,
       to: contractAddress,
       data: contract.methods.addEvidence(caseId, ipfsHash).encodeABI(),
-      gas: Math.ceil(gas * 1.2),
-      gasPrice: await web3.eth.getGasPrice(),
+      gas: Math.ceil(Number(gas) * 1.2),
+      gasPrice: Number(await web3.eth.getGasPrice()),
       chainId: process.env.CHAIN_ID || 11155111
     };
 
@@ -195,8 +195,8 @@ async function submitForensicReportOnBlockchain(caseId, ipfsHash, forensicAddres
       from: account.address,
       to: contractAddress,
       data: contract.methods.submitForensicReport(caseId, ipfsHash).encodeABI(),
-      gas: Math.ceil(gas * 1.2),
-      gasPrice: await web3.eth.getGasPrice(),
+      gas: Math.ceil(Number(gas) * 1.2),
+      gasPrice: Number(await web3.eth.getGasPrice()),
       chainId: process.env.CHAIN_ID || 11155111
     };
 
@@ -242,8 +242,8 @@ async function giveVerdictOnBlockchain(caseId, decision, judgeAddress, privateKe
       from: account.address,
       to: contractAddress,
       data: contract.methods.giveVerdict(caseId, decision).encodeABI(),
-      gas: Math.ceil(gas * 1.2),
-      gasPrice: await web3.eth.getGasPrice(),
+      gas: Math.ceil(Number(gas) * 1.2),
+      gasPrice: Number(await web3.eth.getGasPrice()),
       chainId: process.env.CHAIN_ID || 11155111
     };
 
@@ -291,8 +291,8 @@ async function logAccessOnBlockchain(caseId, userAddress, privateKey) {
       from: account.address,
       to: contractAddress,
       data: contract.methods.logAccess(caseId).encodeABI(),
-      gas: Math.ceil(gas * 1.2),
-      gasPrice: await web3.eth.getGasPrice(),
+      gas: Math.ceil(Number(gas) * 1.2),
+      gasPrice: Number(await web3.eth.getGasPrice()),
       chainId: process.env.CHAIN_ID || 11155111
     };
 
@@ -392,8 +392,8 @@ async function registerRoleOnBlockchain(role, walletAddress, privateKey) {
       from: account.address,
       to: contractAddress,
       data: method.encodeABI(),
-      gas: Math.ceil(gas * 1.2),
-      gasPrice: await web3.eth.getGasPrice(),
+      gas: Math.ceil(Number(gas) * 1.2),
+      gasPrice: Number(await web3.eth.getGasPrice()),
       chainId: process.env.CHAIN_ID || 11155111
     };
 
