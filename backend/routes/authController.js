@@ -151,9 +151,20 @@ export const approveUser = async (req, res) => {
 export const checkVerification = async (req, res) => {
   try {
     const { wallet, role } = req.body;
+    const rpcUrl = process.env.INFURA_URL
+      || (process.env.INFURA_API_KEY
+        ? `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`
+        : null);
+
+    if (!rpcUrl || !process.env.SMART_CONTRACT_ADDRESS) {
+      return res.json({
+        verified: false,
+        error: 'Blockchain configuration missing'
+      });
+    }
 
     const Web3 = (await import('web3')).default;
-    const web3 = new Web3(process.env.INFURA_URL);
+    const web3 = new Web3(rpcUrl);
 
     const abi = [
       'function police(address) view returns (bool)',
@@ -172,7 +183,12 @@ export const checkVerification = async (req, res) => {
       JUDGE: 'judge'
     };
 
-    const verified = await contract.methods[map[role]](wallet).call();
+    const method = map[String(role || '').toUpperCase()];
+    if (!method) {
+      return res.json({ verified: false, error: 'Invalid role' });
+    }
+
+    const verified = await contract.methods[method](wallet).call();
     res.json({ verified });
   } catch (err) {
     res.status(500).json({ message: err.message });

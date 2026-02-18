@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import { toast } from "react-toastify";
-import { getSession, clearSession, getRoleVerificationStatus } from "../utils/auth";
+import { getSession, setSession, clearSession, verifyRoleOnBlockchain } from "../utils/auth";
 import DashboardSwitcher from "../components/DashboardSwitcher";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -56,9 +56,14 @@ export default function PoliceDashboard() {
       
       const data = await response.json();
       
-      // Verify role on blockchain
-      if (data.user?.wallet && data.user?.role) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setSession({ ...data.user, token: session.token });
+
+      // Verify role on blockchain only when admin approved
+      if (data.user?.isVerified && data.user?.wallet && data.user?.role) {
         await checkRoleOnChain(data.user.wallet, data.user.role);
+      } else {
+        setRoleVerified(false);
       }
       
       fetchCases();
@@ -86,28 +91,10 @@ export default function PoliceDashboard() {
   /* -------------------- BLOCKCHAIN VERIFY -------------------- */
   const checkRoleOnChain = async (walletAddress, role) => {
     try {
-      const response = await fetch(`${API_URL}/auth/check-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`
-        },
-        body: JSON.stringify({
-          wallet: walletAddress,
-          role: role
-        })
-      });
+      const verification = await verifyRoleOnBlockchain(walletAddress, role);
+      setRoleVerified(verification.verified || false);
 
-      if (!response.ok) {
-        console.warn("Role verification endpoint not available");
-        setRoleVerified(false);
-        return;
-      }
-
-      const data = await response.json();
-      setRoleVerified(data.verified || false);
-      
-      if (data.verified) {
+      if (verification.verified) {
         toast.success("✓ Police role verified on blockchain");
       } else {
         toast.warning("⚠️ Police role not yet verified on blockchain");
@@ -121,7 +108,7 @@ export default function PoliceDashboard() {
   /* -------------------- CASES -------------------- */
   const fetchCases = async () => {
     try {
-      const response = await fetch(`${API_URL}/cases`, {
+      const response = await fetch(`${API_URL}/cases/my-cases`, {
         headers: { Authorization: `Bearer ${session.token}` }
       });
       
@@ -139,7 +126,7 @@ export default function PoliceDashboard() {
       return toast.warning("Blockchain verification required");
 
     try {
-      const response = await fetch(`${API_URL}/cases`, {
+      const response = await fetch(`${API_URL}/cases/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
