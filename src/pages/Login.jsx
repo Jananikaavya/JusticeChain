@@ -91,14 +91,18 @@ export default function Login() {
       
       setSession({ ...data.user, token: data.token });
 
-      // Verify role on blockchain
-      setVerifying(true);
-      const verification = await verifyRoleOnBlockchain(data.user.wallet, data.user.role);
-      setVerifying(false);
+      // Only verify role on blockchain if user is verified in database
+      if (data.user.isVerified) {
+        setVerifying(true);
+        const verification = await verifyRoleOnBlockchain(data.user.wallet, data.user.role);
+        setVerifying(false);
 
-      if (!verification.verified) {
-        console.warn("⚠️ Role verification warning:", verification.error);
-        // Don't block login, but warn user
+        if (!verification.verified) {
+          console.warn("⚠️ Role verification warning:", verification.error);
+          // Don't block login, but warn user
+        }
+      } else {
+        console.log("ℹ️ User not yet approved by admin, skipping blockchain verification");
       }
 
       // Redirect by role

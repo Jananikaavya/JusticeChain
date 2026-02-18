@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { getSession, clearSession } from "../utils/auth";
 import DashboardSwitcher from "../components/DashboardSwitcher";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, "");
+const API_URL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const session = getSession();
@@ -38,7 +41,7 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     try {
       // Fetch cases
-      const casesRes = await fetch("http://localhost:5000/api/cases/all", {
+      const casesRes = await fetch(`${API_URL}/cases/all`, {
         headers: { Authorization: `Bearer ${session.token}` }
       });
       if (casesRes.ok) {
@@ -48,7 +51,7 @@ export default function AdminDashboard() {
 
       // Fetch users (if endpoint exists)
       try {
-        const usersRes = await fetch("http://localhost:5000/api/admin/users", {
+        const usersRes = await fetch(`${API_URL}/admin/users`, {
           headers: { Authorization: `Bearer ${session.token}` }
         });
         if (usersRes.ok) {
@@ -61,7 +64,7 @@ export default function AdminDashboard() {
 
       // Fetch audit logs
       try {
-        const auditRes = await fetch("http://localhost:5000/api/admin/audit-logs", {
+        const auditRes = await fetch(`${API_URL}/admin/audit-logs`, {
           headers: { Authorization: `Bearer ${session.token}` }
         });
         if (auditRes.ok) {
@@ -79,7 +82,7 @@ export default function AdminDashboard() {
   const handleApproveCase = async (caseId) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/cases/${caseId}/approve`, {
+      const response = await fetch(`${API_URL}/cases/${caseId}/approve`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -110,7 +113,7 @@ export default function AdminDashboard() {
 
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/api/cases/assign-forensic", {
+      const response = await fetch(`${API_URL}/cases/assign-forensic`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -143,7 +146,7 @@ export default function AdminDashboard() {
 
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/api/cases/assign-judge", {
+      const response = await fetch(`${API_URL}/cases/assign-judge`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
