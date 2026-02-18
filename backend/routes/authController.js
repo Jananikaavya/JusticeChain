@@ -169,7 +169,9 @@ export const checkVerification = async (req, res) => {
     const abi = [
       'function police(address) view returns (bool)',
       'function forensic(address) view returns (bool)',
-      'function judge(address) view returns (bool)'
+      'function judge(address) view returns (bool)',
+      'function hasAnyRole(address) view returns (bool)',
+      'function getUserRole(address) view returns (string)'
     ];
 
     const contract = new web3.eth.Contract(
@@ -183,13 +185,29 @@ export const checkVerification = async (req, res) => {
       JUDGE: 'judge'
     };
 
-    const method = map[String(role || '').toUpperCase()];
+    const normalizedRole = String(role || '').toUpperCase();
+    const method = map[normalizedRole];
     if (!method) {
       return res.json({ verified: false, error: 'Invalid role' });
     }
 
-    const verified = await contract.methods[method](wallet).call();
-    res.json({ verified });
+    if (typeof contract.methods[method] === 'function') {
+      const verified = await contract.methods[method](wallet).call();
+      return res.json({ verified });
+    }
+
+    if (typeof contract.methods.getUserRole === 'function') {
+      const userRole = await contract.methods.getUserRole(wallet).call();
+      const verified = String(userRole || '').toUpperCase() === normalizedRole;
+      return res.json({ verified });
+    }
+
+    if (typeof contract.methods.hasAnyRole === 'function') {
+      const verified = await contract.methods.hasAnyRole(wallet).call();
+      return res.json({ verified });
+    }
+
+    return res.json({ verified: false, error: 'Role methods not available' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
