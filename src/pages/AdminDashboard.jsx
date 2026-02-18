@@ -171,6 +171,66 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSuspend = async (userId, isSuspended) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/admin/users/${userId}/suspend`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify({})
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage(
+          `✅ User ${isSuspended ? 'unsuspended' : 'suspended'} successfully!`
+        );
+        fetchAllData();
+        setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        setErrorMessage(data.message || 'Failed to suspend/unsuspend user');
+      }
+    } catch (error) {
+      setErrorMessage('Error suspending/unsuspending user');
+      console.error('Suspend error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveUser = async (userId) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/admin/approve-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage('✅ User approved and registered on blockchain!');
+        fetchAllData();
+        setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        setErrorMessage(data.message || 'Failed to approve user');
+      }
+    } catch (error) {
+      setErrorMessage('Error approving user');
+      console.error('Approve error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     clearSession();
     navigate("/login");
@@ -445,14 +505,14 @@ export default function AdminDashboard() {
                     <th className="px-4 py-2 text-left">Email</th>
                     <th className="px-4 py-2 text-left">Role</th>
                     <th className="px-4 py-2 text-left">Role ID</th>
-                    <th className="px-4 py-2 text-left">Wallet</th>
+                    <th className="px-4 py-2 text-left">Verified</th>
                     <th className="px-4 py-2 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {allUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-4 py-4 text-center text-gray-500">
+                      <td colSpan="7" className="px-4 py-4 text-center text-gray-500">
                         No users available or endpoint not configured
                       </td>
                     </tr>
@@ -467,11 +527,38 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-4 py-2 text-xs font-mono">{user.roleId}</td>
-                        <td className="px-4 py-2 text-xs font-mono">{user.wallet?.slice(0, 10)}...</td>
                         <td className="px-4 py-2">
-                          <button className="text-red-600 hover:underline text-xs">
-                            Suspend
-                          </button>
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            user.isVerified
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {user.isVerified ? '✓ Yes' : '⏳ Pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2">
+                          <div className="flex gap-2">
+                            {!user.isVerified && (
+                              <button
+                                onClick={() => handleApproveUser(user._id)}
+                                disabled={loading}
+                                className="text-xs font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                ✓ Approve
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleSuspend(user._id, user.isSuspended)}
+                              disabled={loading}
+                              className={`text-xs font-semibold transition ${
+                                user.isSuspended
+                                  ? 'text-green-600 hover:text-green-800'
+                                  : 'text-red-600 hover:text-red-800'
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                              {user.isSuspended ? '✓ Unsuspend' : '✕ Suspend'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
