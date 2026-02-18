@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: justice-chain-backend
+    env: node
+    plan: free
+    root_dir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
