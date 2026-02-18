@@ -36,6 +36,21 @@ app.use(
 
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: '🔗 Justice Chain Backend is running',
+    status: 'operational',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      cases: '/api/cases',
+      evidence: '/api/evidence',
+      admin: '/api/admin'
+    }
+  });
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -65,5 +80,21 @@ const connectDB = async () => {
     throw error;
   }
 };
+
+// 404 Handler - Must be last
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    message: `${req.method} ${req.path} is not defined`,
+    availableEndpoints: {
+      root: '/',
+      health: '/health',
+      auth: '/api/auth/register, /api/auth/login',
+      cases: '/api/cases',
+      evidence: '/api/evidence',
+      admin: '/api/admin/users, /api/admin/audit-logs'
+    }
+  });
+});
 
 export { app, connectDB };
