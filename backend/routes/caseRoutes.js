@@ -58,6 +58,5 @@ router.put('/:caseId/witnesses/:witnessId', updateWitnessReliability);
 
 // Activity Logs routes
 router.get('/:caseId/activity-logs', getActivityLogs);
-router.get('/logs/user/activity', getUserActivityLogs);
 
 export default router;
