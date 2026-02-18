@@ -53,7 +53,15 @@ export default function Login() {
 
     // 2. Admin login (wallet only, no username/password needed)
     if (normalizedWallet === normalizedAdmin) {
-      setSession({ role: "ADMIN", wallet, username: "Admin" });
+      // Create a special admin token for API access
+      const adminToken = btoa(`ADMIN:${wallet}:${Date.now()}`);
+      setSession({ 
+        role: "ADMIN", 
+        wallet, 
+        username: "Admin",
+        token: adminToken
+      });
+      localStorage.setItem('token', adminToken);
       navigate("/dashboard/admin");
       return;
     }

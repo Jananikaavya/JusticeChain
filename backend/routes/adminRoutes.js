@@ -1,12 +1,20 @@
 import express from 'express';
 import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+const ADMIN_WALLET = '0x7f1F93f7d1F58AC2644A28b74bd3063123C25CdD';
 
 /* ================= GET ALL USERS ================= */
-router.get('/users', async (req, res) => {
+router.get('/users', authenticateToken, async (req, res) => {
   try {
+    // Check if user is admin (either ADMIN role or admin wallet)
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.wallet?.toLowerCase() === ADMIN_WALLET.toLowerCase();
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
     const users = await User.find().select('-password');
     res.json({ users });
   } catch (err) {
@@ -15,8 +23,14 @@ router.get('/users', async (req, res) => {
 });
 
 /* ================= GET AUDIT LOGS ================= */
-router.get('/audit-logs', async (req, res) => {
+router.get('/audit-logs', authenticateToken, async (req, res) => {
   try {
+    // Check if user is admin
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.wallet?.toLowerCase() === ADMIN_WALLET.toLowerCase();
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
     const logs = await ActivityLog.find()
       .sort({ timestamp: -1 })
       .limit(100)
@@ -29,7 +43,13 @@ router.get('/audit-logs', async (req, res) => {
 });
 
 /* ================= APPROVE USER (Blockchain Registration) ================= */
-router.post('/approve-user', async (req, res) => {
+router.post('/approve-user', authenticateToken, async (req, res) => {
+  // Check if user is admin
+  const isAdmin = req.user?.role === 'ADMIN' || req.user?.wallet?.toLowerCase() === ADMIN_WALLET.toLowerCase();
+  if (!isAdmin) {
+    return res.status(403).json({ message: 'Access denied. Admin role required.' });
+  }
+
   try {
     const { userId } = req.body;
     const user = await User.findById(userId);
@@ -86,7 +106,13 @@ router.post('/approve-user', async (req, res) => {
 });
 
 /* ================= SUSPEND USER ================= */
-router.put('/users/:id/suspend', async (req, res) => {
+router.put('/users/:id/suspend', authenticateToken, async (req, res) => {
+  // Check if user is admin
+  const isAdmin = req.user?.role === 'ADMIN' || req.user?.wallet?.toLowerCase() === ADMIN_WALLET.toLowerCase();
+  if (!isAdmin) {
+    return res.status(403).json({ message: 'Access denied. Admin role required.' });
+  }
+
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
