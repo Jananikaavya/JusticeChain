@@ -4,13 +4,16 @@ const activityLogSchema = new mongoose.Schema({
   logId: {
     type: String,
     unique: true,
-    required: true,
-    index: true
+    sparse: true,
+    default: () => new Date().getTime().toString()
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
   },
   performedByRole: String,
   action: {
@@ -29,7 +32,12 @@ const activityLogSchema = new mongoose.Schema({
       'WITNESS_ADDED',
       'TRANSFER_REQUESTED',
       'FORENSIC_REQUESTED',
-      'HEARING_REQUESTED'
+      'HEARING_REQUESTED',
+      'APPROVE_USER',
+      'SUSPEND_USER',
+      'UNSUSPEND_USER',
+      'LOGIN',
+      'LOGOUT'
     ],
     required: true
   },
@@ -37,8 +45,9 @@ const activityLogSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Case'
   },
-  relatedResourceId: String, // Evidence ID, Note ID, etc
+  relatedResourceId: String,
   description: String,
+  details: String,
   metadata: {},
   ipAddress: String,
   timestamp: {

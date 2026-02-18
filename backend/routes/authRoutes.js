@@ -4,13 +4,15 @@ import {
   login,
   getAllUsers,
   approveUser,
-  checkVerification
+  checkVerification,
+  getMe
 } from '../routes/authController.js';
 
 const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
+router.get('/user/me', getMe);
 
 // Admin
 router.get('/users', getAllUsers);

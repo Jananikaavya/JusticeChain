@@ -58,16 +58,27 @@ router.post('/approve-user', async (req, res) => {
     await user.save();
 
     // Log the action
-    await ActivityLog.create({
-      userId: req.user?.id,
-      action: 'APPROVE_USER',
-      details: `Approved user ${user.username} (${user.role})`,
-      ipAddress: req.ip
-    });
+    try {
+      await ActivityLog.create({
+        action: 'APPROVE_USER',
+        details: `Approved user ${user.username} (${user.role})`,
+        ipAddress: req.ip,
+        performedBy: req.user?.id || null
+      });
+    } catch (logError) {
+      console.warn('Warning: Could not create activity log:', logError.message);
+    }
 
     res.json({
       message: 'User approved and registered on blockchain',
-      txHash: result.transactionHash
+      txHash: result.transactionHash,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isVerified: true
+      }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -83,12 +94,16 @@ router.put('/users/:id/suspend', async (req, res) => {
     user.isSuspended = !user.isSuspended;
     await user.save();
 
-    await ActivityLog.create({
-      userId: req.user?.id,
-      action: user.isSuspended ? 'SUSPEND_USER' : 'UNSUSPEND_USER',
-      details: `${user.isSuspended ? 'Suspended' : 'Unsuspended'} user ${user.username}`,
-      ipAddress: req.ip
-    });
+    try {
+      await ActivityLog.create({
+        action: user.isSuspended ? 'SUSPEND_USER' : 'UNSUSPEND_USER',
+        details: `${user.isSuspended ? 'Suspended' : 'Unsuspended'} user ${user.username}`,
+        ipAddress: req.ip,
+        performedBy: req.user?.id || null
+      });
+    } catch (logError) {
+      console.warn('Warning: Could not create activity log:', logError.message);
+    }
 
     res.json({ 
       message: `User ${user.isSuspended ? 'suspended' : 'unsuspended'}`,
