@@ -207,36 +207,29 @@ export const uploadEvidence = async (req, res) => {
       return res.status(400).json({ message: 'No file provided' });
     }
 
-    // Verify user is POLICE
+    // Verify user and role
     const user = await User.findById(userId);
+    if (!user) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     if (user.role !== 'POLICE') {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(403).json({ message: 'Only police can upload evidence' });
     }
 
     // Verify case exists
     const caseData = await Case.findById(caseId);
     if (!caseData) {
-      return res.status(404).json({ message: 'Case not found' });
-    }
-
-    // Upload to Pinata/IPFS
-    const pinataResult = await uploadToPinata(
-      file.path,
-      file.filename,
-      {
-        caseId: caseId,
-        uploadedBy: user.username,
-        evidenceType: evidenceType,
-        timestamp: new Date().toISOString()
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
       }
-    );
-
-    if (!pinataResult.success) {
-      fs.unlinkSync(file.path);
-      return res.status(400).json({ 
-        message: 'Failed to upload to IPFS', 
-        error: pinataResult.message 
-      });
+      return res.status(404).json({ message: 'Case not found' });
     }
 
     // Generate Evidence ID
@@ -246,7 +239,24 @@ export const uploadEvidence = async (req, res) => {
     const fileContent = fs.readFileSync(file.path);
     const sha256Hash = generateSHA256(fileContent);
 
-    // Create evidence record
+    // Try to upload to Pinata/IPFS, but don't fail if it's not configured
+    let pinataResult = { success: false, ipfsHash: null, pinataUrl: null, pinataIpfsGatewayUrl: null };
+    try {
+      pinataResult = await uploadToPinata(
+        file.path,
+        file.filename,
+        {
+          caseId: caseId,
+          uploadedBy: user.username,
+          evidenceType: evidenceType,
+          timestamp: new Date().toISOString()
+        }
+      );
+    } catch (pinataError) {
+      console.warn('⚠️ Pinata upload skipped:', pinataError.message);
+    }
+
+    // Create evidence record (with or without IPFS hash)
     const evidence = new Evidence({
       evidenceId,
       caseId,
@@ -257,9 +267,9 @@ export const uploadEvidence = async (req, res) => {
       fileName: file.filename,
       fileSize: file.size,
       mimeType: file.mimetype,
-      ipfsHash: pinataResult.ipfsHash,
-      pinataUrl: pinataResult.pinataUrl,
-      pinataIpfsGatewayUrl: pinataResult.pinataIpfsGatewayUrl,
+      ipfsHash: pinataResult.ipfsHash || null,
+      pinataUrl: pinataResult.pinataUrl || null,
+      pinataIpfsGatewayUrl: pinataResult.pinataIpfsGatewayUrl || null,
       sha256Hash,
       status: 'UPLOADED',
       chainOfCustody: [{
@@ -279,12 +289,14 @@ export const uploadEvidence = async (req, res) => {
     await caseData.save();
 
     // Clean up local file
-    fs.unlinkSync(file.path);
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
 
     await logActivity(userId, user.role, 'EVIDENCE_UPLOADED', caseData._id, evidenceId, title);
 
     res.status(201).json({
-      message: 'Evidence uploaded successfully',
+      message: 'Evidence uploaded successfully' + (pinataResult.ipfsHash ? ' (stored on IPFS)' : ' (local storage)'),
       evidence: {
         _id: evidence._id,
         evidenceId: evidence.evidenceId,

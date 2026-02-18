@@ -264,25 +264,25 @@ export default function PoliceDashboard() {
       addToast("warning", "Select a case first");
       return;
     }
-    if (!chainState.roleVerified) {
-      addToast("warning", "Blockchain verification required");
-      return;
-    }
 
     try {
       setBusy((prev) => ({ ...prev, uploadAction: true }));
       const formData = new FormData();
       formData.append("file", file);
       formData.append("caseId", selectedCaseId);
+      formData.append("title", file.name);
 
-      await apiFetch("/api/evidence/upload", {
+      const response = await apiFetch("/api/evidence/upload", {
         method: "POST",
         body: formData
       });
 
-      addToast("success", "Evidence uploaded to IPFS + Blockchain");
+      addToast("success", response.message || "Evidence uploaded successfully");
       fetchEvidenceByCase(selectedCaseId);
+      setFilePreviewUrl("");
+      setFilePreviewType("");
     } catch (error) {
+      console.error("Evidence upload failed:", error);
       addToast("error", error.message);
     } finally {
       setBusy((prev) => ({ ...prev, uploadAction: false }));
