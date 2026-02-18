@@ -13,24 +13,43 @@ import { authenticateToken } from './middleware/authMiddleware.js';
 
 const app = express();
 
-const parseOrigins = (value) =>
-  (value || 'http://localhost:5173')
+const parseOrigins = (value) => {
+  if (!value) return ['http://localhost:5173', 'http://localhost:3000'];
+  return value
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+};
 
 const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN || process.env.FRONTEND_URL);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
         callback(null, true);
         return;
       }
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      
+      // In production, be more lenient if no CORS_ORIGIN is set
+      if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+        console.warn(`⚠️ CORS: Allowing origin ${origin} (no CORS_ORIGIN env var set)`);
+        callback(null, true);
+        return;
+      }
+      
       callback(new Error('Not allowed by CORS'));
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
 
