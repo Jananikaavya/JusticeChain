@@ -322,7 +322,7 @@ export const getAllCases = async (req, res) => {
       .populate('evidence')
       .sort({ createdAt: -1 });
 
-    res.json(cases);
+    res.json({ cases });
   } catch (error) {
     console.error('Error fetching cases:', error);
     res.status(500).json({ message: 'Failed to fetch cases', error: error.message });
