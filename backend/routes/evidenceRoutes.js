@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import { 
   uploadEvidence, 
   getAllEvidence,
@@ -15,9 +16,14 @@ import path from 'path';
 const router = express.Router();
 
 // Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), 'uploads', 'evidence');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/evidence/');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + file.originalname);
