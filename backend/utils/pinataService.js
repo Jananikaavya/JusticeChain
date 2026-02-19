@@ -2,6 +2,7 @@ import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import axios from 'axios';
 
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
 const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
@@ -23,69 +24,54 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
       };
     }
 
-    // Read file as buffer
-    const fileBuffer = fs.readFileSync(filePath);
+    // Read file as stream
+    const fileStream = fs.createReadStream(filePath);
     
-    const form = new FormData();
+    const formData = new FormData();
+    formData.append('file', fileStream, fileName);
     
-    // Append file as blob-like object with proper file info
-    form.append('file', fileBuffer, {
-      filename: fileName,
-      contentType: 'application/octet-stream'
-    });
-    
-    // Add metadata as JSON string
+    // Add metadata
     const pinataMetadata = JSON.stringify({
       name: fileName,
       keyvalues: metadata
     });
-    form.append('pinataMetadata', pinataMetadata);
+    formData.append('pinataMetadata', pinataMetadata);
 
-    // Add options as JSON string
+    // Add options
     const pinataOptions = JSON.stringify({
       cidVersion: 0,
     });
-    form.append('pinataOptions', pinataOptions);
+    formData.append('pinataOptions', pinataOptions);
 
-    console.log('📤 Uploading to Pinata:', { 
-      fileName, 
-      size: fileBuffer.length,
+    console.log('📤 Uploading to Pinata via axios:', { 
+      fileName,
       apiKeyPrefix: PINATA_API_KEY.substring(0, 10) + '...'
     });
 
-    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-      method: 'POST',
+    const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
       headers: {
         'pinata_api_key': PINATA_API_KEY,
         'pinata_secret_api_key': PINATA_SECRET_API_KEY,
-        ...form.getHeaders()
-      },
-      body: form
+        ...formData.getHeaders()
+      }
     });
 
-    console.log('Pinata response status:', response.status);
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('❌ Pinata API Error:', response.status, '-', error);
-      throw new Error(`Pinata Error: ${response.status} - ${error}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ Pinata Upload Success:', data.IpfsHash);
+    console.log('✅ Pinata Upload Success:', response.data.IpfsHash);
     
     return {
       success: true,
-      ipfsHash: data.IpfsHash,
-      pinataUrl: `${PINATA_GATEWAY_URL}${data.IpfsHash}`,
-      pinataIpfsGatewayUrl: `ipfs://${data.IpfsHash}`
+      ipfsHash: response.data.IpfsHash,
+      pinataUrl: `${PINATA_GATEWAY_URL}${response.data.IpfsHash}`,
+      pinataIpfsGatewayUrl: `ipfs://${response.data.IpfsHash}`
     };
 
   } catch (error) {
-    console.error('❌ Pinata upload error:', error.message);
+    console.error('❌ Pinata upload error:', error.response?.data || error.message);
     return {
       success: false,
-      message: error.message,
+      message: error.response?.data?.error || error.message,
       ipfsHash: null,
       pinataUrl: null
     };
