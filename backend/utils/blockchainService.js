@@ -173,6 +173,47 @@ async function addEvidenceOnBlockchain(caseId, ipfsHash, policeAddress, privateK
 }
 
 /**
+ * Approve case on blockchain (admin)
+ * @param {number} caseId - Case ID
+ * @param {string} privateKey - Admin private key for signing
+ */
+async function approveCaseOnBlockchain(caseId, privateKey) {
+  try {
+    if (!contract) throw new Error('Blockchain not initialized');
+
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+
+    const gas = await contract.methods.approveCase(caseId).estimateGas({
+      from: account.address
+    });
+
+    const tx = {
+      from: account.address,
+      to: contractAddress,
+      data: contract.methods.approveCase(caseId).encodeABI(),
+      gas: Math.ceil(Number(gas) * 1.2),
+      gasPrice: Number(await web3.eth.getGasPrice()),
+      chainId: process.env.CHAIN_ID || 11155111
+    };
+
+    const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+    console.log(`✅ Case approved on blockchain. TX: ${receipt.transactionHash}`);
+    return {
+      success: true,
+      transactionHash: receipt.transactionHash
+    };
+  } catch (error) {
+    console.error('❌ Error approving case on blockchain:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * Submit forensic report on blockchain
  * @param {number} caseId - Case ID
  * @param {string} ipfsHash - IPFS hash of forensic report
@@ -420,6 +461,7 @@ export {
   submitForensicReportOnBlockchain,
   giveVerdictOnBlockchain,
   logAccessOnBlockchain,
+  approveCaseOnBlockchain,
   registerRoleOnBlockchain,
   verifyEvidenceOnBlockchain,
   getCaseFromBlockchain,

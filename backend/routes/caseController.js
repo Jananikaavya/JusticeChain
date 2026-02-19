@@ -28,7 +28,7 @@ const logActivity = async (userId, userRole, action, caseId, resourceId = null, 
 // Create a new case (Police Only)
 export const createCase = async (req, res) => {
   try {
-    const { title, description, caseNumber, location, priority, policeStation, isDraft, latitude, longitude } = req.body;
+    const { title, description, caseNumber, location, priority, policeStation, isDraft, latitude, longitude, blockchainCaseId, blockchainCaseTxHash } = req.body;
     const userId = req.user.userId;
 
     // Verify user is POLICE
@@ -52,6 +52,8 @@ export const createCase = async (req, res) => {
       registeredBy: userId,
       policeStation,
       isDraft: isDraft || false,
+      blockchainCaseId: Number.isFinite(Number(blockchainCaseId)) ? Number(blockchainCaseId) : null,
+      blockchainCaseTxHash: blockchainCaseTxHash || null,
       status: isDraft ? 'DRAFT' : 'REGISTERED',
       timeline: [{
         status: isDraft ? 'DRAFT' : 'REGISTERED',
@@ -74,6 +76,40 @@ export const createCase = async (req, res) => {
   } catch (error) {
     console.error('Case creation error:', error);
     res.status(500).json({ message: 'Failed to create case', error: error.message });
+  }
+};
+
+// Set blockchain info on case (Police only)
+export const setCaseBlockchainInfo = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { blockchainCaseId, blockchainCaseTxHash } = req.body;
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'POLICE') {
+      return res.status(403).json({ message: 'Only police can update blockchain case info' });
+    }
+
+    const caseData = await Case.findById(caseId);
+    if (!caseData) {
+      return res.status(404).json({ message: 'Case not found' });
+    }
+
+    if (caseData.registeredBy.toString() !== userId) {
+      return res.status(403).json({ message: 'You can only update your own cases' });
+    }
+
+    caseData.blockchainCaseId = Number.isFinite(Number(blockchainCaseId)) ? Number(blockchainCaseId) : null;
+    caseData.blockchainCaseTxHash = blockchainCaseTxHash || null;
+    caseData.updatedAt = new Date();
+
+    await caseData.save();
+
+    res.json({ message: 'Blockchain case info updated', case: caseData });
+  } catch (error) {
+    console.error('Error updating blockchain case info:', error);
+    res.status(500).json({ message: 'Failed to update blockchain case info', error: error.message });
   }
 };
 
@@ -491,8 +527,28 @@ export const approveCase = async (req, res) => {
       return res.status(404).json({ message: 'Case not found' });
     }
 
+    if (!caseData.blockchainCaseId) {
+      return res.status(400).json({ message: 'Case is not registered on blockchain' });
+    }
+
+    const { initBlockchain, approveCaseOnBlockchain } = await import('../utils/blockchainService.js');
+    const adminPrivateKey = process.env.ADMIN_PRIVATE_KEY;
+    const contractAddress = process.env.SMART_CONTRACT_ADDRESS;
+
+    if (!adminPrivateKey || !contractAddress) {
+      return res.status(500).json({ message: 'Blockchain configuration missing' });
+    }
+
+    initBlockchain(contractAddress, 'sepolia', adminPrivateKey);
+    const chainResult = await approveCaseOnBlockchain(caseData.blockchainCaseId, adminPrivateKey);
+
+    if (!chainResult.success) {
+      return res.status(500).json({ message: 'Blockchain approval failed', error: chainResult.error });
+    }
+
     caseData.status = 'APPROVED';
     caseData.approvedBy = userId;
+    caseData.blockchainApprovalTxHash = chainResult.transactionHash;
     caseData.timeline.push({
       status: 'APPROVED',
       timestamp: new Date(),

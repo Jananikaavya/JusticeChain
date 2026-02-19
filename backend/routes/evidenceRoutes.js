@@ -5,6 +5,7 @@ import {
   getAllEvidence,
   getEvidenceByCase, 
   getEvidenceById, 
+  updateEvidenceBlockchainInfo,
   submitAnalysis, 
   markImmutable, 
   getEvidenceChain,
@@ -40,6 +41,7 @@ router.post('/upload', upload.single('file'), uploadEvidence);
 router.get('/all', getAllEvidence);
 router.get('/case/:caseId', getEvidenceByCase);
 router.get('/:evidenceId', getEvidenceById);
+router.put('/:evidenceId/blockchain', updateEvidenceBlockchainInfo);
 router.post('/verify/:evidenceId', verifyEvidence);
 router.put('/:evidenceId/analysis', submitAnalysis);
 router.put('/:evidenceId/immutable', markImmutable);

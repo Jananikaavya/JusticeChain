@@ -232,6 +232,13 @@ export const uploadEvidence = async (req, res) => {
       return res.status(404).json({ message: 'Case not found' });
     }
 
+    if (!description || !description.trim()) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(400).json({ message: 'Description is required' });
+    }
+
     // Generate Evidence ID
     const evidenceId = `EVID_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     
@@ -239,36 +246,40 @@ export const uploadEvidence = async (req, res) => {
     const fileContent = fs.readFileSync(file.path);
     const sha256Hash = generateSHA256(fileContent);
 
-    // Try to upload to Pinata/IPFS, but don't fail if it's not configured
-    let pinataResult = { success: false, ipfsHash: null, pinataUrl: null, pinataIpfsGatewayUrl: null };
-    try {
-      pinataResult = await uploadToPinata(
-        file.path,
-        file.filename,
-        {
-          caseId: caseId,
-          uploadedBy: user.username,
-          evidenceType: evidenceType,
-          timestamp: new Date().toISOString()
-        }
-      );
-    } catch (pinataError) {
-      console.warn('⚠️ Pinata upload skipped:', pinataError.message);
+    const pinataResult = await uploadToPinata(
+      file.path,
+      file.filename,
+      {
+        caseId: caseId,
+        uploadedBy: user.username,
+        evidenceType: evidenceType,
+        timestamp: new Date().toISOString()
+      }
+    );
+
+    if (!pinataResult.success || !pinataResult.ipfsHash || !pinataResult.pinataUrl) {
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+      return res.status(400).json({
+        message: 'Failed to upload to IPFS',
+        error: pinataResult.message || 'Pinata upload failed'
+      });
     }
 
-    // Create evidence record (with or without IPFS hash)
+    // Create evidence record
     const evidence = new Evidence({
       evidenceId,
       caseId,
       type: evidenceType || 'OTHER',
       title: title || file.originalname || 'Untitled Evidence',
-      description: description || '',
+      description: description.trim(),
       uploadedBy: userId,
       fileName: file.filename,
       fileSize: file.size,
       mimeType: file.mimetype,
-      ipfsHash: pinataResult.ipfsHash || null,
-      pinataUrl: pinataResult.pinataUrl || null,
+      ipfsHash: pinataResult.ipfsHash,
+      pinataUrl: pinataResult.pinataUrl,
       pinataIpfsGatewayUrl: pinataResult.pinataIpfsGatewayUrl || null,
       sha256Hash,
       status: 'UPLOADED',
@@ -296,7 +307,7 @@ export const uploadEvidence = async (req, res) => {
     await logActivity(userId, user.role, 'EVIDENCE_UPLOADED', caseData._id, evidenceId, title);
 
     res.status(201).json({
-      message: 'Evidence uploaded successfully' + (pinataResult.ipfsHash ? ' (stored on IPFS)' : ' (local storage)'),
+      message: 'Evidence uploaded successfully',
       evidence: {
         _id: evidence._id,
         evidenceId: evidence.evidenceId,
@@ -373,6 +384,39 @@ export const getEvidenceById = async (req, res) => {
   } catch (error) {
     console.error('Error fetching evidence:', error);
     res.status(500).json({ message: 'Failed to fetch evidence', error: error.message });
+  }
+};
+
+// Update evidence blockchain info (Police/Admin)
+export const updateEvidenceBlockchainInfo = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+    const { blockchainTxHash, blockchainHash, smartContractAddress } = req.body;
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId);
+    if (!user || (user.role !== 'POLICE' && user.role !== 'ADMIN')) {
+      return res.status(403).json({ message: 'Only police or admin can update blockchain info' });
+    }
+
+    const evidence = await Evidence.findByIdAndUpdate(
+      evidenceId,
+      {
+        blockchainTxHash: blockchainTxHash || null,
+        blockchainHash: blockchainHash || null,
+        smartContractAddress: smartContractAddress || null
+      },
+      { new: true }
+    );
+
+    if (!evidence) {
+      return res.status(404).json({ message: 'Evidence not found' });
+    }
+
+    res.json({ message: 'Blockchain info updated', evidence });
+  } catch (error) {
+    console.error('Error updating evidence blockchain info:', error);
+    res.status(500).json({ message: 'Failed to update blockchain info', error: error.message });
   }
 };
 

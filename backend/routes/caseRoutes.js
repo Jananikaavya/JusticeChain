@@ -1,6 +1,7 @@
 import express from 'express';
 import { 
   createCase, 
+  setCaseBlockchainInfo,
   getAllCases, 
   getCasesByRole, 
   getCaseById, 
@@ -33,6 +34,7 @@ router.post('/create', createCase);
 router.get('/all', getAllCases);
 router.get('/my-cases', getCasesByRole);
 router.get('/:caseId', getCaseById);
+router.put('/:caseId/blockchain', setCaseBlockchainInfo);
 router.put('/:caseId/status', updateCaseStatus);
 router.put('/:caseId/verdict', submitVerdict);
 router.post('/:caseId/hearings', scheduleHearing);

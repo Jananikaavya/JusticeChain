@@ -127,6 +127,18 @@ const caseSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  blockchainCaseId: {
+    type: Number,
+    default: null
+  },
+  blockchainCaseTxHash: {
+    type: String,
+    default: null
+  },
+  blockchainApprovalTxHash: {
+    type: String,
+    default: null
+  },
   policeIdentityHash: {
     type: String,
     default: null

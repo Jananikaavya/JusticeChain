@@ -13,6 +13,15 @@ const getApiBase = () =>
 const getPinataGateway = () =>
   import.meta.env.VITE_PINATA_GATEWAY_URL || "https://gateway.pinata.cloud/ipfs/";
 
+const getContractAddress = () =>
+  import.meta.env.VITE_JUSTICECHAIN_CONTRACT || "";
+
+const CONTRACT_ABI = [
+  "event CaseCreated(uint256 caseId, address police)",
+  "function createCase()",
+  "function addEvidence(uint256 caseId, string ipfsHash)"
+];
+
 const formatDate = (value) =>
   value ? new Date(value).toLocaleString() : "-";
 
@@ -114,6 +123,53 @@ export default function PoliceDashboard() {
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 4000);
+  };
+
+  const getContract = (signer) => {
+    const contractAddress = getContractAddress();
+    if (!contractAddress) {
+      throw new Error("Contract address not configured");
+    }
+    return new ethers.Contract(contractAddress, CONTRACT_ABI, signer);
+  };
+
+  const createCaseOnChain = async () => {
+    if (!chainState.signer) {
+      throw new Error("Wallet not connected");
+    }
+    const contract = getContract(chainState.signer);
+    const tx = await contract.createCase();
+    const receipt = await tx.wait();
+    const iface = new ethers.Interface(CONTRACT_ABI);
+    const event = receipt.logs
+      .map((log) => {
+        try {
+          return iface.parseLog(log);
+        } catch {
+          return null;
+        }
+      })
+      .find((parsed) => parsed && parsed.name === "CaseCreated");
+
+    const chainCaseId = event?.args?.caseId ? Number(event.args.caseId) : null;
+    if (!chainCaseId) {
+      throw new Error("Failed to read blockchain case ID");
+    }
+
+    return { chainCaseId, txHash: tx.hash };
+  };
+
+  const addEvidenceOnChain = async (blockchainCaseId, ipfsHash) => {
+    if (!chainState.signer) {
+      throw new Error("Wallet not connected");
+    }
+    const contract = getContract(chainState.signer);
+    const tx = await contract.addEvidence(blockchainCaseId, ipfsHash);
+    await tx.wait();
+    return {
+      txHash: tx.hash,
+      blockchainHash: ethers.keccak256(ethers.toUtf8Bytes(ipfsHash))
+    };
   };
 
   useEffect(() => {
@@ -251,12 +307,21 @@ export default function PoliceDashboard() {
       addToast("warning", "Fill in required fields");
       return;
     }
+    if (!chainState.roleVerified) {
+      addToast("warning", "Blockchain role verification required");
+      return;
+    }
     try {
       setBusy((prev) => ({ ...prev, createAction: true }));
+      const chainResult = await createCaseOnChain();
       const data = await apiFetch("/api/cases/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newCaseForm)
+        body: JSON.stringify({
+          ...newCaseForm,
+          blockchainCaseId: chainResult.chainCaseId,
+          blockchainCaseTxHash: chainResult.txHash
+        })
       });
       addToast("success", "Case created successfully");
       setNewCaseForm({
@@ -281,7 +346,7 @@ export default function PoliceDashboard() {
     try {
       setBusy((prev) => ({ ...prev, evidenceLoading: true }));
       const data = await apiFetch(`/api/evidence/case/${caseId}`);
-      setEvidenceList(data.evidence || []);
+      setEvidenceList(data.evidences || data.evidence || []);
     } catch (error) {
       console.warn("Failed to fetch evidence:", error.message);
     } finally {
@@ -294,6 +359,14 @@ export default function PoliceDashboard() {
     if (!file) return;
     if (!selectedCaseId) {
       addToast("warning", "Select a case first");
+      return;
+    }
+    if (!selectedCase?.blockchainCaseId) {
+      addToast("warning", "Case is not registered on blockchain");
+      return;
+    }
+    if (!chainState.roleVerified) {
+      addToast("warning", "Blockchain role verification required");
       return;
     }
 
@@ -309,6 +382,25 @@ export default function PoliceDashboard() {
       const response = await apiFetch("/api/evidence/upload", {
         method: "POST",
         body: formData
+      });
+
+      if (!response?.evidence?.ipfsHash) {
+        throw new Error("Missing IPFS hash from upload");
+      }
+
+      const chainResult = await addEvidenceOnChain(
+        Number(selectedCase.blockchainCaseId),
+        response.evidence.ipfsHash
+      );
+
+      await apiFetch(`/api/evidence/${response.evidence._id}/blockchain`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blockchainTxHash: chainResult.txHash,
+          blockchainHash: chainResult.blockchainHash,
+          smartContractAddress: getContractAddress()
+        })
       });
 
       addToast("success", response.message || "Evidence uploaded successfully");
