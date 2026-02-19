@@ -932,22 +932,118 @@ export default function PoliceDashboard() {
 
         {/* VERIFICATION TAB */}
         {activeTab === "Verification" && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4 text-blue-900">Blockchain Status</h2>
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p><strong>Wallet:</strong> {chainState.address ? chainState.address.substring(0, 10) + "..." : "Not connected"}</p>
-                <p className="mt-2"><strong>Role Status:</strong> <span className={chainState.roleVerified ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>
-                  {chainState.roleVerified ? "✅ Verified on Blockchain" : "⏳ Pending Verification"}
-                </span></p>
+          <div className="space-y-6">
+            {/* Blockchain Status */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold mb-4 text-blue-900">⛓️ Blockchain Status</h2>
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p><strong>Wallet:</strong> {chainState.address ? chainState.address.substring(0, 10) + "..." : "Not connected"}</p>
+                  <p className="mt-2"><strong>Role Status:</strong> <span className={chainState.roleVerified ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>
+                    {chainState.roleVerified ? "✅ Verified on Blockchain" : "⏳ Pending Verification"}
+                  </span></p>
+                  <p className="mt-2"><strong>Network:</strong> <span className="text-purple-600 font-semibold">Sepolia Testnet</span></p>
+                </div>
+                <button
+                  onClick={ensureWallet}
+                  className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700"
+                >
+                  Reconnect Wallet
+                </button>
               </div>
-              <button
-                onClick={ensureWallet}
-                className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700"
-              >
-                Reconnect Wallet
-              </button>
             </div>
+
+            {/* Case Blockchain Info */}
+            {selectedCase && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold mb-4 text-blue-900">📋 Case Blockchain Info</h2>
+                {selectedCase.blockchainCaseId ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-green-50 border-l-4 border-green-600 rounded">
+                      <p><strong>✅ Case on Blockchain:</strong></p>
+                      <p className="text-sm text-gray-700 mt-1"><strong>Blockchain Case ID:</strong> {selectedCase.blockchainCaseId}</p>
+                      {selectedCase.blockchainCaseTxHash && (
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${selectedCase.blockchainCaseTxHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm mt-2 block"
+                        >
+                          🔗 View on Sepolia Etherscan →
+                        </a>
+                      )}
+                    </div>
+                    {selectedCase.blockchainApprovalTxHash && (
+                      <div className="p-3 bg-blue-50 border-l-4 border-blue-600 rounded">
+                        <p><strong>✅ Case Approved on Blockchain</strong></p>
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${selectedCase.blockchainApprovalTxHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm mt-2 block"
+                        >
+                          🔗 View Approval TX →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">No blockchain case ID. Create a new case to register on blockchain.</p>
+                )}
+              </div>
+            )}
+
+            {/* Evidence Blockchain Info */}
+            {selectedEvidence && selectedEvidence.blockchainTxHash && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-bold mb-4 text-blue-900">📦 Evidence Blockchain Info</h2>
+                <div className="space-y-3">
+                  <div className="p-4 bg-green-50 border-l-4 border-green-600 rounded">
+                    <p className="font-semibold text-green-800">✅ Evidence Stored on Blockchain</p>
+                    
+                    <div className="mt-3 space-y-2 text-sm">
+                      <p><strong>Evidence ID:</strong> <code className="bg-gray-200 px-2 py-1 rounded text-xs">{selectedEvidence.evidenceId}</code></p>
+                      
+                      <p><strong>IPFS Hash (on-chain):</strong></p>
+                      <code className="block bg-gray-200 px-3 py-2 rounded text-xs break-all">{selectedEvidence.ipfsHash}</code>
+                      
+                      {selectedEvidence.pinataUrl && (
+                        <>
+                          <p><strong>View File on IPFS:</strong></p>
+                          <a
+                            href={selectedEvidence.pinataUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline block"
+                          >
+                            🌐 Open on Pinata Gateway →
+                          </a>
+                        </>
+                      )}
+                      
+                      <p><strong>Blockchain Transaction:</strong></p>
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${selectedEvidence.blockchainTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline block"
+                      >
+                        🔗 View on Etherscan →
+                      </a>
+                      
+                      <p><strong>Uploaded At:</strong> {formatDate(selectedEvidence.uploadedAt)}</p>
+                      <p><strong>File Hash (SHA256):</strong> <code className="bg-gray-200 px-2 py-1 rounded text-xs">{selectedEvidence.sha256Hash?.substring(0, 32)}...</code></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!selectedCase && (
+              <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                <p className="text-blue-800">Select a case and evidence to view blockchain verification details</p>
+              </div>
+            )}
           </div>
         )}
       </div>
