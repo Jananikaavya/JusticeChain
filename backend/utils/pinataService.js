@@ -23,37 +23,34 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
       };
     }
 
+    // Read file as buffer
+    const fileBuffer = fs.readFileSync(filePath);
+    
     const form = new FormData();
-    const stream = fs.createReadStream(filePath);
+    form.append('file', fileBuffer, fileName);
     
-    form.append('file', stream);
-    
-    // Add metadata
+    // Add metadata as JSON string
     const pinataMetadata = JSON.stringify({
       name: fileName,
       keyvalues: metadata
     });
     form.append('pinataMetadata', pinataMetadata);
 
-    // Add options
+    // Add options as JSON string
     const pinataOptions = JSON.stringify({
       cidVersion: 0,
     });
     form.append('pinataOptions', pinataOptions);
 
-    // Get form headers properly
-    const formHeaders = form.getHeaders();
-    const headers = {
-      'pinata_api_key': PINATA_API_KEY,
-      'pinata_secret_api_key': PINATA_SECRET_API_KEY,
-      ...formHeaders
-    };
-
-    console.log('📤 Sending to Pinata with headers:', Object.keys(headers));
+    console.log('📤 Uploading to Pinata:', { fileName, size: fileBuffer.length });
 
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
-      headers: headers,
+      headers: {
+        'pinata_api_key': PINATA_API_KEY,
+        'pinata_secret_api_key': PINATA_SECRET_API_KEY,
+        ...form.getHeaders()
+      },
       body: form
     });
 
