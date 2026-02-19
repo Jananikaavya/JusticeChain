@@ -333,6 +333,26 @@ export const getEvidenceByCase = async (req, res) => {
   }
 };
 
+// Get all evidence (Admin only)
+export const getAllEvidence = async (req, res) => {
+  try {
+    const isAdmin = req.user?.role === 'ADMIN';
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
+    const evidences = await Evidence.find()
+      .populate('uploadedBy', 'username role email')
+      .populate('analyzedBy', 'username role email')
+      .sort({ uploadedAt: -1 });
+
+    res.json({ evidences });
+  } catch (error) {
+    console.error('Error fetching all evidence:', error);
+    res.status(500).json({ message: 'Failed to fetch evidence', error: error.message });
+  }
+};
+
 // Get evidence by ID
 export const getEvidenceById = async (req, res) => {
   try {

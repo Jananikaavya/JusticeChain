@@ -128,9 +128,41 @@ export default function PoliceDashboard() {
     if (!sessionState?.token) {
       return;
     }
-    fetchCases();
+    loadUser();
     ensureWallet();
   }, [sessionState?.token]);
+
+  const loadUser = async () => {
+    try {
+      const response = await fetch(`${getApiBase()}/api/auth/user/me`, {
+        headers: { Authorization: `Bearer ${sessionState.token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load user");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setSessionState({ ...data.user, token: sessionState.token });
+
+      if (data.user?.isVerified && data.user?.wallet && data.user?.role) {
+        const verification = await verifyRoleOnBlockchain(data.user.wallet, data.user.role);
+        setChainState((prev) => ({ ...prev, roleVerified: verification.verified || false }));
+        if (!verification.verified && verification.error) {
+          addToast("warning", verification.error);
+        }
+      } else {
+        setChainState((prev) => ({ ...prev, roleVerified: false }));
+      }
+
+      fetchCases();
+    } catch (error) {
+      addToast("error", "Session expired. Please log in again.");
+      clearSession();
+      navigate("/login");
+    }
+  };
 
   useEffect(() => {
     if (!selectedCaseId) {
@@ -210,7 +242,7 @@ export default function PoliceDashboard() {
     } catch (error) {
       addToast("error", error.message);
     } finally {
-      setBusy((prev) => ({ ...prev, loading: true }));
+      setBusy((prev) => ({ ...prev, loading: false }));
     }
   };
 

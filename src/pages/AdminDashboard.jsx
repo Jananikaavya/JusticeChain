@@ -32,9 +32,21 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (session?.token) {
       fetchAllData();
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchAllData, 30000);
-      return () => clearInterval(interval);
+      // Refresh every 10 seconds
+      const interval = setInterval(fetchAllData, 10000);
+      const onFocus = () => fetchAllData();
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") {
+          fetchAllData();
+        }
+      };
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onVisibility);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
     }
   }, [session]);
 
@@ -73,6 +85,19 @@ export default function AdminDashboard() {
         }
       } catch (err) {
         console.log("Audit logs endpoint not available");
+      }
+
+      // Fetch evidence
+      try {
+        const evidenceRes = await fetch(`${API_URL}/evidence/all`, {
+          headers: { Authorization: `Bearer ${session.token}` }
+        });
+        if (evidenceRes.ok) {
+          const data = await evidenceRes.json();
+          setAllEvidence(data.evidences || []);
+        }
+      } catch (err) {
+        console.log("Evidence endpoint not available");
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -310,6 +335,12 @@ export default function AdminDashboard() {
               {tab.label}
             </button>
           ))}
+          <button
+            onClick={fetchAllData}
+            className="ml-auto px-4 py-2 font-semibold rounded bg-slate-900 text-white hover:bg-slate-800"
+          >
+            Refresh Now
+          </button>
         </div>
 
         {/* Dashboard Tab */}

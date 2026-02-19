@@ -1,6 +1,7 @@
 import express from 'express';
 import { 
   uploadEvidence, 
+  getAllEvidence,
   getEvidenceByCase, 
   getEvidenceById, 
   submitAnalysis, 
@@ -30,6 +31,7 @@ const upload = multer({
 
 // Evidence routes
 router.post('/upload', upload.single('file'), uploadEvidence);
+router.get('/all', getAllEvidence);
 router.get('/case/:caseId', getEvidenceByCase);
 router.get('/:evidenceId', getEvidenceById);
 router.post('/verify/:evidenceId', verifyEvidence);
