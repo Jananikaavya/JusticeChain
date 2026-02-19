@@ -38,7 +38,7 @@ const evidenceSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    default: ""
   },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -58,11 +58,11 @@ const evidenceSchema = new mongoose.Schema({
   },
   ipfsHash: {
     type: String,
-    required: true
+    default: null
   },
   pinataUrl: {
     type: String,
-    required: true
+    default: null
   },
   pinataIpfsGatewayUrl: {
     type: String

@@ -303,6 +303,8 @@ export default function PoliceDashboard() {
       formData.append("file", file);
       formData.append("caseId", selectedCaseId);
       formData.append("title", file.name);
+      formData.append("description", "Uploaded from Police Dashboard");
+      formData.append("evidenceType", "DIGITAL");
 
       const response = await apiFetch("/api/evidence/upload", {
         method: "POST",
