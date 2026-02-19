@@ -261,9 +261,11 @@ export const uploadEvidence = async (req, res) => {
       if (fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
       }
+      console.error('❌ Evidence upload - Pinata failed:', pinataResult);
       return res.status(400).json({
         message: 'Failed to upload to IPFS',
-        error: pinataResult.message || 'Pinata upload failed'
+        error: pinataResult.message || 'Pinata upload failed',
+        details: process.env.NODE_ENV === 'development' ? pinataResult : undefined
       });
     }
 

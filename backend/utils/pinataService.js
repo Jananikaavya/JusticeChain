@@ -53,10 +53,12 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
 
     if (!response.ok) {
       const error = await response.text();
+      console.error('❌ Pinata API Error:', response.status, error);
       throw new Error(`Pinata Error: ${response.status} - ${error}`);
     }
 
     const data = await response.json();
+    console.log('✅ Pinata Upload Success:', data.IpfsHash);
     
     return {
       success: true,
