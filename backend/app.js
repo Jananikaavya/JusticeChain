@@ -10,6 +10,7 @@ import evidenceRoutes from './routes/evidenceRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
 import { authenticateToken } from './middleware/authMiddleware.js';
+import { updateSessionActivity } from './routes/authController.js';
 
 const app = express();
 
@@ -79,9 +80,9 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/cases', authenticateToken, caseRoutes);
-app.use('/api/evidence', authenticateToken, evidenceRoutes);
-app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/cases', authenticateToken, updateSessionActivity, caseRoutes);
+app.use('/api/evidence', authenticateToken, updateSessionActivity, evidenceRoutes);
+app.use('/api/admin', authenticateToken, updateSessionActivity, adminRoutes);
 
 let isConnected = false;
 

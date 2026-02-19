@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [allUsers, setAllUsers] = useState([]);
   const [allEvidence, setAllEvidence] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [activeSessions, setActiveSessions] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
   
@@ -85,6 +86,19 @@ export default function AdminDashboard() {
         }
       } catch (err) {
         console.log("Audit logs endpoint not available");
+      }
+
+      // 📊 Fetch active user sessions for real-time monitoring
+      try {
+        const sessionsRes = await fetch(`${API_URL}/auth/active-sessions`, {
+          headers: { Authorization: `Bearer ${session.token}` }
+        });
+        if (sessionsRes.ok) {
+          const data = await sessionsRes.json();
+          setActiveSessions(data.sessions || []);
+        }
+      } catch (err) {
+        console.log("Active sessions endpoint not available", err);
       }
 
       // Fetch evidence
@@ -270,7 +284,11 @@ export default function AdminDashboard() {
     readyForHearing: allCases.filter(c => c.status === "READY_FOR_HEARING").length,
     closed: allCases.filter(c => c.status === "CLOSED").length,
     totalUsers: allUsers.length,
-    totalEvidence: allEvidence.length
+    totalEvidence: allEvidence.length,
+    activeUsers: activeSessions.length,
+    activePolice: activeSessions.filter(s => s.role === "police").length,
+    activeForensic: activeSessions.filter(s => s.role === "forensic").length,
+    activeJudge: activeSessions.filter(s => s.role === "judge").length
   };
 
   return (
@@ -316,6 +334,7 @@ export default function AdminDashboard() {
         <div className="flex flex-wrap gap-2 mb-6 border-b">
           {[
             { id: "dashboard", label: "📊 Dashboard" },
+            { id: "online", label: "🟢 Online Users" },
             { id: "cases", label: "📋 Cases" },
             { id: "users", label: "👥 Users" },
             { id: "evidence", label: "🔍 Evidence" },
@@ -379,6 +398,30 @@ export default function AdminDashboard() {
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <h3 className="text-gray-600 text-sm font-semibold">Total Evidence Items</h3>
                 <p className="text-3xl font-bold text-red-600">{stats.totalEvidence}</p>
+              </div>
+            </div>
+
+            {/* 🟢 Active Users Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-green-100 to-green-50 p-6 rounded-lg shadow-md border-2 border-green-300">
+                <h3 className="text-green-700 text-sm font-semibold">🟢 Currently Online</h3>
+                <p className="text-3xl font-bold text-green-600">{stats.activeUsers}</p>
+                <p className="text-xs text-green-600 mt-2">Real-time active users</p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-100 to-blue-50 p-6 rounded-lg shadow-md border-2 border-blue-300">
+                <h3 className="text-blue-700 text-sm font-semibold">👮 Police Officers</h3>
+                <p className="text-3xl font-bold text-blue-600">{stats.activePolice}</p>
+                <p className="text-xs text-blue-600 mt-2">Online now</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-100 to-purple-50 p-6 rounded-lg shadow-md border-2 border-purple-300">
+                <h3 className="text-purple-700 text-sm font-semibold">🔬 Forensic Experts</h3>
+                <p className="text-3xl font-bold text-purple-600">{stats.activeForensic}</p>
+                <p className="text-xs text-purple-600 mt-2">Online now</p>
+              </div>
+              <div className="bg-gradient-to-br from-amber-100 to-amber-50 p-6 rounded-lg shadow-md border-2 border-amber-300">
+                <h3 className="text-amber-700 text-sm font-semibold">⚖️ Judges</h3>
+                <p className="text-3xl font-bold text-amber-600">{stats.activeJudge}</p>
+                <p className="text-xs text-amber-600 mt-2">Online now</p>
               </div>
             </div>
 
@@ -521,6 +564,100 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 🟢 Online Users Tab - Real-time Session Monitoring */}
+        {activeTab === "online" && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">🟢 Active Users Monitoring (Real-Time)</h2>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 text-sm">
+                <strong>Live Status:</strong> This section updates every 10 seconds. Green dot indicates currently logged-in users.
+              </p>
+            </div>
+
+            {activeSessions.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500 text-lg">No active users currently online</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeSessions.map((session) => {
+                  const loginTime = new Date(session.loginAt);
+                  const lastActivityTime = new Date(session.lastActivityAt);
+                  const minutesAgo = Math.floor((Date.now() - loginTime) / 60000);
+                  const secondsAgo = Math.floor((Date.now() - lastActivityTime) / 1000);
+
+                  return (
+                    <div key={session._id} className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
+                          <h3 className="font-bold text-gray-800">{session.username || "Unknown"}</h3>
+                        </div>
+                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">
+                          {session.role}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <p>
+                          <strong>Email:</strong> {session.email || "N/A"}
+                        </p>
+                        <p>
+                          <strong>Logged in:</strong>{" "}
+                          {minutesAgo === 0 ? "Just now" : `${minutesAgo} min${minutesAgo !== 1 ? "s" : ""} ago`}
+                        </p>
+                        <p>
+                          <strong>Last Activity:</strong>{" "}
+                          {secondsAgo === 0
+                            ? "Active now"
+                            : secondsAgo < 60
+                            ? `${secondsAgo}s ago`
+                            : `${Math.floor(secondsAgo / 60)}m ago`}
+                        </p>
+                        <p>
+                          <strong>IP Address:</strong> {session.ipAddress || "N/A"}
+                        </p>
+                        <p className="text-xs truncate">
+                          <strong>User Agent:</strong> {session.userAgent?.substring(0, 40) || "N/A"}...
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t">
+                        <p className="text-xs text-gray-400">
+                          Status: {session.isActive ? "🟢 Active" : "🔴 Inactive"}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Summary Stats */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-green-100 rounded-lg p-4 text-center border-2 border-green-300">
+                <p className="text-green-700 font-semibold text-2xl">{activeSessions.length}</p>
+                <p className="text-green-600 text-sm">Currently Online</p>
+              </div>
+
+              <div className="bg-blue-100 rounded-lg p-4 text-center border-2 border-blue-300">
+                <p className="text-blue-700 font-semibold text-2xl">
+                  {activeSessions.filter((s) => s.role === "police").length}
+                </p>
+                <p className="text-blue-600 text-sm">Police Officers</p>
+              </div>
+
+              <div className="bg-purple-100 rounded-lg p-4 text-center border-2 border-purple-300">
+                <p className="text-purple-700 font-semibold text-2xl">
+                  {activeSessions.filter((s) => s.role === "forensic").length}
+                </p>
+                <p className="text-purple-600 text-sm">Forensic Experts</p>
+              </div>
+            </div>
           </div>
         )}
 

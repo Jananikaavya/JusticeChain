@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import UserSession from '../models/UserSession.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sendRoleIdEmail } from '../utils/emailService.js';
@@ -86,6 +87,24 @@ export const login = async (req, res) => {
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
+    );
+
+    // 📊 Track user session for real-time admin monitoring
+    await UserSession.findOneAndUpdate(
+      { userId: user._id },
+      {
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        loginAt: new Date(),
+        lastActivityAt: new Date(),
+        isActive: true,
+        logoutAt: null,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      },
+      { upsert: true, new: true }
     );
 
     res.json({
@@ -239,4 +258,60 @@ export const getMe = async (req, res) => {
     }
     res.status(500).json({ message: err.message });
   }
+};
+
+/* ================= LOGOUT & SESSION TRACKING ================= */
+export const logout = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ message: 'User not authenticated' });
+    }
+
+    await UserSession.findOneAndUpdate(
+      { userId },
+      {
+        isActive: false,
+        logoutAt: new Date()
+      }
+    );
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================= GET ACTIVE SESSIONS (ADMIN) ================= */
+export const getActiveSessions = async (req, res) => {
+  try {
+    // Get all active sessions ordered by last activity
+    const activeSessions = await UserSession.find({
+      isActive: true,
+      logoutAt: null
+    }).sort({ lastActivityAt: -1 });
+
+    res.json({
+      count: activeSessions.length,
+      sessions: activeSessions
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================= UPDATE SESSION ACTIVITY ================= */
+export const updateSessionActivity = async (req, res, next) => {
+  try {
+    if (req.user?.id) {
+      await UserSession.findOneAndUpdate(
+        { userId: req.user.id },
+        { lastActivityAt: new Date() },
+        { new: true }
+      );
+    }
+  } catch (err) {
+    console.error('Session activity update error:', err);
+  }
+  next();
 };
