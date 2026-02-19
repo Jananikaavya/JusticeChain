@@ -14,7 +14,7 @@ console.log('DEBUG Pinata Gateway URL:', PINATA_GATEWAY_URL);
 export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
   try {
     if (!PINATA_API_KEY || !PINATA_SECRET_API_KEY) {
-      console.warn('⚠️ Pinata credentials not configured. Evidence will be stored locally only.');
+      console.warn('⚠️ Pinata credentials not configured.');
       return {
         success: false,
         message: 'Pinata not configured',
@@ -27,7 +27,12 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
     const fileBuffer = fs.readFileSync(filePath);
     
     const form = new FormData();
-    form.append('file', fileBuffer, fileName);
+    
+    // Append file as blob-like object with proper file info
+    form.append('file', fileBuffer, {
+      filename: fileName,
+      contentType: 'application/octet-stream'
+    });
     
     // Add metadata as JSON string
     const pinataMetadata = JSON.stringify({
@@ -42,7 +47,11 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
     });
     form.append('pinataOptions', pinataOptions);
 
-    console.log('📤 Uploading to Pinata:', { fileName, size: fileBuffer.length });
+    console.log('📤 Uploading to Pinata:', { 
+      fileName, 
+      size: fileBuffer.length,
+      apiKeyPrefix: PINATA_API_KEY.substring(0, 10) + '...'
+    });
 
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
@@ -54,9 +63,11 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
       body: form
     });
 
+    console.log('Pinata response status:', response.status);
+
     if (!response.ok) {
       const error = await response.text();
-      console.error('❌ Pinata API Error:', response.status, error);
+      console.error('❌ Pinata API Error:', response.status, '-', error);
       throw new Error(`Pinata Error: ${response.status} - ${error}`);
     }
 
@@ -71,7 +82,7 @@ export const uploadToPinata = async (filePath, fileName, metadata = {}) => {
     };
 
   } catch (error) {
-    console.error('Pinata upload error:', error.message);
+    console.error('❌ Pinata upload error:', error.message);
     return {
       success: false,
       message: error.message,
