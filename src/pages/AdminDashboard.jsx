@@ -34,8 +34,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (session?.token) {
       fetchAllData();
-      // Refresh every 10 seconds
-      const interval = setInterval(fetchAllData, 10000);
+      // Refresh every 30 seconds (was 10 - too aggressive and causing server exhaustion)
+      const interval = setInterval(fetchAllData, 30000);
       const onFocus = () => fetchAllData();
       const onVisibility = () => {
         if (document.visibilityState === "visible") {
