@@ -24,10 +24,11 @@ export default function AdminDashboard() {
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  const [assignmentForm, setAssignmentForm] = useState({
-    forensicId: "",
-    judgeId: ""
-  });
+  // Separate allocation workflows
+  const [forensicAllocationCaseId, setForensicAllocationCaseId] = useState(null);
+  const [forensicId, setForensicId] = useState("");
+  const [judgeAllocationCaseId, setJudgeAllocationCaseId] = useState(null);
+  const [judgeId, setJudgeId] = useState("");
 
   // Fetch all data
   useEffect(() => {
@@ -145,7 +146,7 @@ export default function AdminDashboard() {
   };
 
   const handleAssignForensic = async (caseId) => {
-    if (!assignmentForm.forensicId) {
+    if (!forensicId) {
       setErrorMessage("❌ Please enter Forensic Officer ID");
       return;
     }
@@ -160,15 +161,19 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           caseId,
-          forensicOfficerId: assignmentForm.forensicId
+          forensicOfficerId: forensicId
         })
       });
 
       if (response.ok) {
-        setSuccessMessage("✅ Forensic Officer assigned!");
-        setAssignmentForm({ ...assignmentForm, forensicId: "" });
+        setSuccessMessage("✅ Forensic Officer assigned successfully!");
+        setForensicId("");
+        setForensicAllocationCaseId(null);
         fetchAllData();
         setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        const data = await response.json();
+        setErrorMessage(data.message || "Failed to assign forensic officer");
       }
     } catch (error) {
       setErrorMessage("Error assigning forensic officer");
@@ -178,7 +183,7 @@ export default function AdminDashboard() {
   };
 
   const handleAssignJudge = async (caseId) => {
-    if (!assignmentForm.judgeId) {
+    if (!judgeId) {
       setErrorMessage("❌ Please enter Judge ID");
       return;
     }
@@ -193,15 +198,19 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           caseId,
-          judgeId: assignmentForm.judgeId
+          judgeId: judgeId
         })
       });
 
       if (response.ok) {
-        setSuccessMessage("✅ Judge assigned!");
-        setAssignmentForm({ ...assignmentForm, judgeId: "" });
+        setSuccessMessage("✅ Judge assigned successfully!");
+        setJudgeId("");
+        setJudgeAllocationCaseId(null);
         fetchAllData();
         setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        const data = await response.json();
+        setErrorMessage(data.message || "Failed to assign judge");
       }
     } catch (error) {
       setErrorMessage("Error assigning judge");
@@ -507,12 +516,20 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-4 py-2 text-xs">{caseItem.forensicOfficerId || "Unassigned"}</td>
                         <td className="px-4 py-2 text-xs">{caseItem.judgeId || "Unassigned"}</td>
-                        <td className="px-4 py-2">
+                        <td className="px-4 py-2 space-x-2 flex gap-1">
                           <button
-                            onClick={() => setSelectedCaseId(caseItem._id)}
-                            className="text-blue-600 hover:underline text-xs"
+                            onClick={() => setForensicAllocationCaseId(caseItem._id)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                            title="Assign forensic expert"
                           >
-                            View
+                            🔬 Forensic
+                          </button>
+                          <button
+                            onClick={() => setJudgeAllocationCaseId(caseItem._id)}
+                            className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs"
+                            title="Assign judge"
+                          >
+                            ⚖️ Judge
                           </button>
                         </td>
                       </tr>
@@ -522,43 +539,104 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Assignment Form */}
-            {selectedCaseId && (
-              <div className="mt-6 bg-blue-50 p-6 rounded-lg border border-blue-200">
-                <h3 className="text-lg font-semibold mb-4">Assign Case</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Separate Forensic Assignment Section */}
+            {forensicAllocationCaseId && (
+              <div className="mt-6 bg-blue-50 p-6 rounded-lg border-2 border-blue-400 shadow-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-blue-900">🔬 Assign Forensic Expert</h3>
+                  <button
+                    onClick={() => {
+                      setForensicAllocationCaseId(null);
+                      setForensicId("");
+                    }}
+                    className="text-gray-600 hover:text-gray-900 text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm text-blue-700 mb-4">
+                  <strong>Case:</strong> {allCases.find(c => c._id === forensicAllocationCaseId)?.title || "Unknown"}
+                </p>
+                <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-semibold mb-2">Forensic Officer ID</label>
                     <input
                       type="text"
-                      value={assignmentForm.forensicId}
-                      onChange={(e) => setAssignmentForm({ ...assignmentForm, forensicId: e.target.value })}
+                      value={forensicId}
+                      onChange={(e) => setForensicId(e.target.value)}
                       placeholder="Enter forensic officer ID"
-                      className="w-full border p-2 rounded"
+                      className="w-full border border-blue-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoFocus
                     />
+                  </div>
+                  <div className="flex gap-3">
                     <button
-                      onClick={() => handleAssignForensic(selectedCaseId)}
+                      onClick={() => handleAssignForensic(forensicAllocationCaseId)}
                       disabled={loading}
-                      className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition disabled:bg-gray-400"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition disabled:bg-gray-400 font-semibold"
                     >
-                      Assign Forensic Officer
+                      {loading ? "Assigning..." : "✅ Assign Forensic"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setForensicAllocationCaseId(null);
+                        setForensicId("");
+                      }}
+                      className="flex-1 bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded transition"
+                    >
+                      Cancel
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Separate Judge Assignment Section */}
+            {judgeAllocationCaseId && (
+              <div className="mt-6 bg-purple-50 p-6 rounded-lg border-2 border-purple-400 shadow-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-purple-900">⚖️ Assign Judge</h3>
+                  <button
+                    onClick={() => {
+                      setJudgeAllocationCaseId(null);
+                      setJudgeId("");
+                    }}
+                    className="text-gray-600 hover:text-gray-900 text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm text-purple-700 mb-4">
+                  <strong>Case:</strong> {allCases.find(c => c._id === judgeAllocationCaseId)?.title || "Unknown"}
+                </p>
+                <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-semibold mb-2">Judge ID</label>
                     <input
                       type="text"
-                      value={assignmentForm.judgeId}
-                      onChange={(e) => setAssignmentForm({ ...assignmentForm, judgeId: e.target.value })}
+                      value={judgeId}
+                      onChange={(e) => setJudgeId(e.target.value)}
                       placeholder="Enter judge ID"
-                      className="w-full border p-2 rounded"
+                      className="w-full border border-purple-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      autoFocus
                     />
+                  </div>
+                  <div className="flex gap-3">
                     <button
-                      onClick={() => handleAssignJudge(selectedCaseId)}
+                      onClick={() => handleAssignJudge(judgeAllocationCaseId)}
                       disabled={loading}
-                      className="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition disabled:bg-gray-400"
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition disabled:bg-gray-400 font-semibold"
                     >
-                      Assign Judge
+                      {loading ? "Assigning..." : "✅ Assign Judge"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setJudgeAllocationCaseId(null);
+                        setJudgeId("");
+                      }}
+                      className="flex-1 bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded transition"
+                    >
+                      Cancel
                     </button>
                   </div>
                 </div>
