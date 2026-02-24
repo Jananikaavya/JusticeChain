@@ -436,33 +436,43 @@ export const assignForensic = async (req, res) => {
     const { caseId, forensicOfficerId } = req.body;
     const userId = req.user.userId;
 
+    // Validate inputs
+    if (!caseId || !forensicOfficerId) {
+      return res.status(400).json({ message: 'Case ID and Forensic Officer ID are required' });
+    }
+
     // Verify user is ADMIN
     const user = await User.findById(userId);
-    if (user.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Only admin can assign forensic' });
     }
 
-    const caseData = await Case.findByIdAndUpdate(
-      caseId,
-      { assignedForensic: forensicOfficerId, status: 'IN_FORENSIC_ANALYSIS' },
-      { new: true }
-    ).populate('assignedForensic', 'username');
+    // Check if case exists first
+    const caseExists = await Case.findById(caseId);
+    if (!caseExists) {
+      return res.status(404).json({ message: 'Case not found' });
+    }
 
-    // Add to timeline
-    caseData.timeline.push({
+    // Add to timeline first
+    caseExists.timeline.push({
       status: 'IN_FORENSIC_ANALYSIS',
       timestamp: new Date(),
       performedBy: userId,
       notes: 'Forensic analyst assigned'
     });
 
-    await caseData.save();
+    // Update forensic assignment
+    caseExists.assignedForensic = forensicOfficerId;
+    caseExists.status = 'IN_FORENSIC_ANALYSIS';
 
-    await logActivity(userId, user.role, 'FORENSIC_ASSIGNED', caseData._id);
+    const updated = await caseExists.save();
+    const populated = await updated.populate('assignedForensic', 'username');
+
+    await logActivity(userId, user.role, 'FORENSIC_ASSIGNED', updated._id);
 
     res.json({
-      message: 'Forensic assigned',
-      case: caseData
+      message: 'Forensic analyst assigned successfully',
+      case: populated
     });
   } catch (error) {
     console.error('Error assigning forensic:', error);
@@ -476,33 +486,43 @@ export const assignJudge = async (req, res) => {
     const { caseId, judgeId } = req.body;
     const userId = req.user.userId;
 
+    // Validate inputs
+    if (!caseId || !judgeId) {
+      return res.status(400).json({ message: 'Case ID and Judge ID are required' });
+    }
+
     // Verify user is ADMIN
     const user = await User.findById(userId);
-    if (user.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Only admin can assign judge' });
     }
 
-    const caseData = await Case.findByIdAndUpdate(
-      caseId,
-      { assignedJudge: judgeId, status: 'HEARING' },
-      { new: true }
-    ).populate('assignedJudge', 'username');
+    // Check if case exists first
+    const caseExists = await Case.findById(caseId);
+    if (!caseExists) {
+      return res.status(404).json({ message: 'Case not found' });
+    }
 
-    // Add to timeline
-    caseData.timeline.push({
+    // Add to timeline first
+    caseExists.timeline.push({
       status: 'HEARING',
       timestamp: new Date(),
       performedBy: userId,
       notes: 'Judge assigned for hearing'
     });
 
-    await caseData.save();
+    // Update judge assignment
+    caseExists.assignedJudge = judgeId;
+    caseExists.status = 'HEARING';
 
-    await logActivity(userId, user.role, 'JUDGE_ASSIGNED', caseData._id);
+    const updated = await caseExists.save();
+    const populated = await updated.populate('assignedJudge', 'username');
+
+    await logActivity(userId, user.role, 'JUDGE_ASSIGNED', updated._id);
 
     res.json({
-      message: 'Judge assigned',
-      case: caseData
+      message: 'Judge assigned successfully',
+      case: populated
     });
   } catch (error) {
     console.error('Error assigning judge:', error);
