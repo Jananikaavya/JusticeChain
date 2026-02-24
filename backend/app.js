@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes.js';
 import caseRoutes from './routes/caseRoutes.js';
 import evidenceRoutes from './routes/evidenceRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 
 import { authenticateToken } from './middleware/authMiddleware.js';
 
@@ -80,6 +81,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/cases', authenticateToken, caseRoutes);
+app.use('/api/cases', authenticateToken, reportRoutes);
 app.use('/api/evidence', authenticateToken, evidenceRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);
 

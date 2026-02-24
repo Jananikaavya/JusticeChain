@@ -101,12 +101,20 @@ export default function ForensicDashboard() {
     conclusion: ""
   });
 
+  const [reports, setReports] = useState([]);
+  const [reportTab, setReportTab] = useState("manual"); // "manual" or "upload"
+  const [uploadFile, setUploadFile] = useState(null);
+  const [fileTitle, setFileTitle] = useState("");
+  const [manualReportTitle, setManualReportTitle] = useState("");
+
   const [busy, setBusy] = useState({
     loading: false,
     evidenceLoading: false,
     verifyAction: false,
     reportAction: false,
-    courtAction: false
+    reportUploadAction: false,
+    courtAction: false,
+    reportLoading: false
   });
 
   const [toasts, setToasts] = useState([]);
@@ -147,9 +155,11 @@ export default function ForensicDashboard() {
     if (!selectedCaseId) {
       setEvidenceList([]);
       setSelectedEvidenceId("");
+      setReports([]);
       return;
     }
     fetchEvidenceByCase(selectedCaseId);
+    fetchReportsByCase(selectedCaseId);
   }, [selectedCaseId]);
 
   useEffect(() => {
@@ -303,6 +313,20 @@ export default function ForensicDashboard() {
     }
   };
 
+  const fetchReportsByCase = async (caseId) => {
+    try {
+      setBusyState("reportLoading", true);
+      const data = await apiFetch(`/api/cases/${caseId}/reports`);
+      setReports(data.reports || []);
+    } catch (error) {
+      console.error(error);
+      addToast("error", error.message);
+      setReports([]);
+    } finally {
+      setBusyState("reportLoading", false);
+    }
+  };
+
   const logAccessOnChain = async () => {
     try {
       if (!selectedCase) return;
@@ -448,8 +472,8 @@ export default function ForensicDashboard() {
 
   const handleSubmitReport = async (event) => {
     event.preventDefault();
-    if (!selectedEvidence || !selectedCase) {
-      addToast("error", "Select evidence to submit a report.");
+    if (!selectedCase) {
+      addToast("error", "Select a case to submit a report.");
       return;
     }
 
@@ -457,61 +481,86 @@ export default function ForensicDashboard() {
       setBusyState("reportAction", true);
 
       const reportPayload = {
-        caseId: selectedCase.caseId,
-        evidenceId: selectedEvidence.evidenceId,
+        title: manualReportTitle || `Forensic Report - ${new Date().toLocaleDateString()}`,
         observations: reportForm.observations,
         analysis: reportForm.analysis,
         conclusion: reportForm.conclusion,
-        analyst: sessionState?.username || "",
-        createdAt: new Date().toISOString()
+        findings: [],
+        recommendations: [],
+        relatedEvidence: selectedEvidenceId ? [selectedEvidenceId] : []
       };
 
-      const reportHash = await sha256FromString(JSON.stringify(reportPayload));
-      const { signature } = await signPayload(reportHash);
-
-      const ipfsUpload = await uploadReportToIpfs(reportPayload);
-      if (ipfsUpload.skipped) {
-        addToast("error", "Pinata token missing. Report hash saved without IPFS upload.");
-      }
-
-      const chainCaseId = parseChainCaseId(selectedCase);
-      const chain = chainState.signer ? chainState : await ensureWallet();
-      if (chain?.contract && chain?.roleVerified && chainCaseId !== null) {
-        try {
-          await chain.contract.submitForensicReport(chainCaseId, ipfsUpload.ipfsHash || reportHash);
-        } catch (error) {
-          console.error("On-chain report submission failed:", error);
-          addToast("error", "Blockchain report submission failed.");
-        }
-      }
-
-      await apiFetch(`/api/evidence/${selectedEvidence._id}/analysis`, {
-        method: "PUT",
+      const data = await apiFetch(`/api/cases/${selectedCase._id}/reports/manual`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          analysisReport: `Observations:\n${reportForm.observations}\n\nAnalysis:\n${reportForm.analysis}\n\nConclusion:\n${reportForm.conclusion}`,
-          analysisNotes: `Report Hash: ${reportHash}\nIPFS: ${ipfsUpload.ipfsHash || "N/A"}\nSignature: ${signature || "N/A"}`,
-          reportHash,
-          reportIpfsHash: ipfsUpload.ipfsHash,
-          signature
-        })
+        body: JSON.stringify(reportPayload)
       });
 
-      logActivity("UPLOADED_REPORT", `Submitted report for ${selectedEvidence.title}`, {
-        reportHash,
-        ipfsHash: ipfsUpload.ipfsHash
+      logActivity("CREATED_MANUAL_REPORT", `Created manual forensic report: ${reportPayload.title}`, {
+        reportId: data.report?.reportId
       });
 
       setReportForm({ observations: "", analysis: "", conclusion: "" });
-      addToast("success", "Forensic report submitted.");
-      await fetchEvidenceByCase(selectedCaseId);
+      setManualReportTitle("");
+      addToast("success", "Manual forensic report created successfully");
+      await fetchReportsByCase(selectedCase._id);
     } catch (error) {
       console.error(error);
       addToast("error", error.message);
     } finally {
       setBusyState("reportAction", false);
+    }
+  };
+
+  const handleUploadReport = async (event) => {
+    event.preventDefault();
+    if (!selectedCase || !uploadFile) {
+      addToast("error", "Select a case and a file to upload");
+      return;
+    }
+
+    try {
+      setBusyState("reportUploadAction", true);
+
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("title", fileTitle || uploadFile.name);
+      formData.append("relatedEvidence", selectedEvidenceId ? [selectedEvidenceId] : []);
+
+      const response = await fetch(
+        `${getApiBase()}/api/cases/${selectedCase._id}/reports/upload`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionState?.token}`
+          },
+          body: formData
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to upload report");
+      }
+
+      const data = await response.json();
+
+      logActivity("UPLOADED_REPORT_FILE", `Uploaded report file: ${uploadFile.name}`, {
+        reportId: data.report?.reportId,
+        fileName: uploadFile.name
+      });
+
+      setUploadFile(null);
+      setFileTitle("");
+      addToast("success", "Report file uploaded successfully");
+      await fetchReportsByCase(selectedCase._id);
+    } catch (error) {
+      console.error(error);
+      addToast("error", error.message);
+    } finally {
+      setBusyState("reportUploadAction", false);
     }
   };
 
@@ -828,66 +877,238 @@ export default function ForensicDashboard() {
             )}
 
             {activeTab === "Reports" && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-bold mb-4">Forensic Report</h3>
-                {!selectedEvidence ? (
-                  <p className="text-sm text-gray-600">Select evidence to add a report.</p>
-                ) : (
-                  <form onSubmit={handleSubmitReport} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">Observations</label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded p-2 text-sm"
-                        rows="3"
-                        value={reportForm.observations}
-                        onChange={(event) =>
-                          setReportForm((prev) => ({
-                            ...prev,
-                            observations: event.target.value
-                          }))
-                        }
-                        required
-                      />
+              <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold mb-4">📋 Forensic Reports</h3>
+                  
+                  {!selectedCase ? (
+                    <p className="text-sm text-gray-600">Select a case to manage reports.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Report Creation Tabs */}
+                      <div className="border-b border-gray-200">
+                        <div className="flex gap-4 flex-wrap">
+                          <button
+                            onClick={() => setReportTab("manual")}
+                            className={`px-4 py-2 text-sm font-semibold border-b-2 transition ${
+                              reportTab === "manual"
+                                ? "border-purple-600 text-purple-600"
+                                : "border-transparent text-gray-600 hover:text-gray-800"
+                            }`}
+                          >
+                            📝 Manual Entry
+                          </button>
+                          <button
+                            onClick={() => setReportTab("upload")}
+                            className={`px-4 py-2 text-sm font-semibold border-b-2 transition ${
+                              reportTab === "upload"
+                                ? "border-purple-600 text-purple-600"
+                                : "border-transparent text-gray-600 hover:text-gray-800"
+                            }`}
+                          >
+                            📤 Upload Document
+                          </button>
+                          <button
+                            onClick={() => setReportTab("list")}
+                            className={`px-4 py-2 text-sm font-semibold border-b-2 transition ${
+                              reportTab === "list"
+                                ? "border-purple-600 text-purple-600"
+                                : "border-transparent text-gray-600 hover:text-gray-800"
+                            }`}
+                          >
+                            📚 Existing Reports ({reports.length})
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Manual Entry Tab */}
+                      {reportTab === "manual" && (
+                        <form onSubmit={handleSubmitReport} className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Report Title</label>
+                            <input
+                              type="text"
+                              className="w-full border border-gray-300 rounded p-2 text-sm"
+                              placeholder="e.g., Fingerprint Analysis Report"
+                              value={manualReportTitle}
+                              onChange={(e) => setManualReportTitle(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Observations</label>
+                            <textarea
+                              className="w-full border border-gray-300 rounded p-2 text-sm"
+                              rows="3"
+                              placeholder="Describe what you observed during the examination..."
+                              value={reportForm.observations}
+                              onChange={(event) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  observations: event.target.value
+                                }))
+                              }
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Analysis</label>
+                            <textarea
+                              className="w-full border border-gray-300 rounded p-2 text-sm"
+                              rows="5"
+                              placeholder="Provide detailed analysis and interpretation of findings..."
+                              value={reportForm.analysis}
+                              onChange={(event) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  analysis: event.target.value
+                                }))
+                              }
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Conclusion</label>
+                            <textarea
+                              className="w-full border border-gray-300 rounded p-2 text-sm"
+                              rows="3"
+                              placeholder="Summarize your conclusions and expert opinion..."
+                              value={reportForm.conclusion}
+                              onChange={(event) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  conclusion: event.target.value
+                                }))
+                              }
+                              required
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={busy.reportAction}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded transition disabled:bg-gray-300"
+                          >
+                            {busy.reportAction ? "Creating..." : "✅ Create Report"}
+                          </button>
+                        </form>
+                      )}
+
+                      {/* Upload Tab */}
+                      {reportTab === "upload" && (
+                        <form onSubmit={handleUploadReport} className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Report Title (optional)</label>
+                            <input
+                              type="text"
+                              className="w-full border border-gray-300 rounded p-2 text-sm"
+                              placeholder="Leave blank to use file name"
+                              value={fileTitle}
+                              onChange={(e) => setFileTitle(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Upload Report File</label>
+                            <div className="border-2 border-dashed border-gray-300 rounded p-6 text-center">
+                              <input
+                                type="file"
+                                id="reportFile"
+                                className="hidden"
+                                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                                accept=".pdf,.doc,.docx,.txt,.xlsx"
+                              />
+                              <label
+                                htmlFor="reportFile"
+                                className="cursor-pointer text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                              >
+                                <p className="mb-2">📎 Click to select or drag and drop</p>
+                                <p className="text-xs text-gray-500">Supported: PDF, DOC, DOCX, TXT, XLSX (Max 50MB)</p>
+                              </label>
+                              {uploadFile && (
+                                <p className="mt-2 text-sm text-green-600 font-semibold">
+                                  ✓ {uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(2)}MB)
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={!uploadFile || busy.reportUploadAction}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded transition disabled:bg-gray-300"
+                          >
+                            {busy.reportUploadAction ? "Uploading..." : "📤 Upload Report"}
+                          </button>
+                        </form>
+                      )}
+
+                      {/* Reports List Tab */}
+                      {reportTab === "list" && (
+                        <div className="space-y-4">
+                          {busy.reportLoading ? (
+                            <p className="text-sm text-gray-600">Loading reports...</p>
+                          ) : reports.length === 0 ? (
+                            <p className="text-sm text-gray-600">No reports created yet for this case.</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {reports.map((report) => (
+                                <div
+                                  key={report._id}
+                                  className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-lg">
+                                          {report.reportType === "MANUAL" ? "📝" : "📄"}
+                                        </span>
+                                        <h4 className="font-semibold text-sm">{report.title}</h4>
+                                      </div>
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        Type: {report.reportType === "MANUAL" ? "Manual Entry" : "Uploaded Document"}
+                                      </p>
+                                      <p className="text-xs text-gray-600">
+                                        Created: {formatDate(report.createdAt)}
+                                      </p>
+                                      {report.fileName && (
+                                        <p className="text-xs text-gray-600">
+                                          File: {report.fileName}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ml-2 ${
+                                        report.status === "DRAFT"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : report.status === "SUBMITTED"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : report.status === "APPROVED"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {report.status}
+                                    </span>
+                                  </div>
+                                  {report.description && (
+                                    <p className="text-xs text-gray-700 mt-2">{report.description}</p>
+                                  )}
+                                  {report.pinataUrl && (
+                                    <a
+                                      href={report.pinataUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-purple-600 hover:underline mt-2 inline-block"
+                                    >
+                                      📥 Download from IPFS
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">Analysis</label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded p-2 text-sm"
-                        rows="4"
-                        value={reportForm.analysis}
-                        onChange={(event) =>
-                          setReportForm((prev) => ({
-                            ...prev,
-                            analysis: event.target.value
-                          }))
-                        }
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">Conclusion</label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded p-2 text-sm"
-                        rows="3"
-                        value={reportForm.conclusion}
-                        onChange={(event) =>
-                          setReportForm((prev) => ({
-                            ...prev,
-                            conclusion: event.target.value
-                          }))
-                        }
-                        required
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={busy.reportAction}
-                      className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded transition disabled:bg-gray-300"
-                    >
-                      {busy.reportAction ? "Submitting..." : "Submit Report"}
-                    </button>
-                  </form>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
