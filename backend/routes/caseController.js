@@ -453,7 +453,16 @@ export const assignForensic = async (req, res) => {
       return res.status(404).json({ message: 'Case not found' });
     }
 
+    // Check if forensic officer exists
+    const forensicOfficer = await User.findById(forensicOfficerId);
+    if (!forensicOfficer || forensicOfficer.role !== 'FORENSIC') {
+      return res.status(404).json({ message: 'Forensic officer not found' });
+    }
+
     // Add to timeline first
+    if (!caseExists.timeline) {
+      caseExists.timeline = [];
+    }
     caseExists.timeline.push({
       status: 'IN_FORENSIC_ANALYSIS',
       timestamp: new Date(),
@@ -503,7 +512,16 @@ export const assignJudge = async (req, res) => {
       return res.status(404).json({ message: 'Case not found' });
     }
 
+    // Check if judge exists
+    const judge = await User.findById(judgeId);
+    if (!judge || judge.role !== 'JUDGE') {
+      return res.status(404).json({ message: 'Judge not found' });
+    }
+
     // Add to timeline first
+    if (!caseExists.timeline) {
+      caseExists.timeline = [];
+    }
     caseExists.timeline.push({
       status: 'HEARING',
       timestamp: new Date(),

@@ -95,7 +95,10 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Witness'
   }],
-  timeline: [caseTimelineSchema],
+  timeline: {
+    type: [caseTimelineSchema],
+    default: []
+  },
   transferRequest: transferRequestSchema,
   hearingHistory: [hearingSchema],
   verdictDecision: {
