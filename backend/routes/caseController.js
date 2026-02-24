@@ -447,9 +447,16 @@ export const assignForensic = async (req, res) => {
       return res.status(403).json({ message: 'Only admin can assign forensic' });
     }
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    // Get user object, or use request user if no userId (special admin token)
+    let user;
+    if (userId) {
+      user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+    } else {
+      // Special admin token - use request data
+      user = { role: 'ADMIN', username: req.user.username || 'Admin' };
     }
 
     // Check if case exists first
@@ -511,9 +518,16 @@ export const assignJudge = async (req, res) => {
       return res.status(403).json({ message: 'Only admin can assign judge' });
     }
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    // Get user object, or use request user if no userId (special admin token)
+    let user;
+    if (userId) {
+      user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+    } else {
+      // Special admin token - use request data
+      user = { role: 'ADMIN', username: req.user.username || 'Admin' };
     }
 
     // Check if case exists first
