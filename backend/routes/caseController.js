@@ -434,17 +434,22 @@ export const updateCaseStatus = async (req, res) => {
 export const assignForensic = async (req, res) => {
   try {
     const { caseId, forensicOfficerId } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.id;
 
     // Validate inputs
     if (!caseId || !forensicOfficerId) {
       return res.status(400).json({ message: 'Case ID and Forensic Officer ID are required' });
     }
 
-    // Verify user is ADMIN
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'ADMIN') {
+    // Verify user is ADMIN (check JWT role first, then database)
+    const userRole = req.user.role;
+    if (userRole !== 'ADMIN') {
       return res.status(403).json({ message: 'Only admin can assign forensic' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Check if case exists first
@@ -493,17 +498,22 @@ export const assignForensic = async (req, res) => {
 export const assignJudge = async (req, res) => {
   try {
     const { caseId, judgeId } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.id;
 
     // Validate inputs
     if (!caseId || !judgeId) {
       return res.status(400).json({ message: 'Case ID and Judge ID are required' });
     }
 
-    // Verify user is ADMIN
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'ADMIN') {
+    // Verify user is ADMIN (check JWT role first, then database)
+    const userRole = req.user.role;
+    if (userRole !== 'ADMIN') {
       return res.status(403).json({ message: 'Only admin can assign judge' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Check if case exists first
