@@ -434,7 +434,7 @@ export const updateCaseStatus = async (req, res) => {
 export const assignForensic = async (req, res) => {
   try {
     const { caseId, forensicOfficerId } = req.body;
-    const userId = req.user.userId || req.user.id;
+    let userId = req.user.userId || req.user.id;
 
     // Validate inputs
     if (!caseId || !forensicOfficerId) {
@@ -455,8 +455,9 @@ export const assignForensic = async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
       }
     } else {
-      // Special admin token - use request data
+      // Special admin token - use request data and set a system admin identifier
       user = { role: 'ADMIN', username: req.user.username || 'Admin' };
+      userId = 'SYSTEM_ADMIN'; // Use identifier for special admin token
     }
 
     // Check if case exists first
@@ -505,7 +506,7 @@ export const assignForensic = async (req, res) => {
 export const assignJudge = async (req, res) => {
   try {
     const { caseId, judgeId } = req.body;
-    const userId = req.user.userId || req.user.id;
+    let userId = req.user.userId || req.user.id;
 
     // Validate inputs
     if (!caseId || !judgeId) {
@@ -526,8 +527,9 @@ export const assignJudge = async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
       }
     } else {
-      // Special admin token - use request data
+      // Special admin token - use request data and set a system admin identifier
       user = { role: 'ADMIN', username: req.user.username || 'Admin' };
+      userId = 'SYSTEM_ADMIN'; // Use identifier for special admin token
     }
 
     // Check if case exists first
