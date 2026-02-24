@@ -559,20 +559,27 @@ export default function AdminDashboard() {
                 </p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Forensic Officer ID</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-semibold mb-2">Select Forensic Officer</label>
+                    <select
                       value={forensicId}
                       onChange={(e) => setForensicId(e.target.value)}
-                      placeholder="Enter forensic officer ID"
                       className="w-full border border-blue-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       autoFocus
-                    />
+                    >
+                      <option value="">-- Choose a Forensic Officer --</option>
+                      {allUsers
+                        .filter(user => user.role === 'FORENSIC')
+                        .map(user => (
+                          <option key={user._id} value={user._id}>
+                            {user.username} ({user.roleId})
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleAssignForensic(forensicAllocationCaseId)}
-                      disabled={loading}
+                      disabled={loading || !forensicId}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition disabled:bg-gray-400 font-semibold"
                     >
                       {loading ? "Assigning..." : "✅ Assign Forensic"}
@@ -611,20 +618,27 @@ export default function AdminDashboard() {
                 </p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Judge ID</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-semibold mb-2">Select Judge</label>
+                    <select
                       value={judgeId}
                       onChange={(e) => setJudgeId(e.target.value)}
-                      placeholder="Enter judge ID"
                       className="w-full border border-purple-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                       autoFocus
-                    />
+                    >
+                      <option value="">-- Choose a Judge --</option>
+                      {allUsers
+                        .filter(user => user.role === 'JUDGE')
+                        .map(user => (
+                          <option key={user._id} value={user._id}>
+                            {user.username} ({user.roleId})
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleAssignJudge(judgeAllocationCaseId)}
-                      disabled={loading}
+                      disabled={loading || !judgeId}
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition disabled:bg-gray-400 font-semibold"
                     >
                       {loading ? "Assigning..." : "✅ Assign Judge"}
