@@ -433,7 +433,7 @@ export const updateCaseStatus = async (req, res) => {
 // Assign forensic department
 export const assignForensic = async (req, res) => {
   try {
-    const { caseId, forensicUserId } = req.body;
+    const { caseId, forensicOfficerId } = req.body;
     const userId = req.user.userId;
 
     // Verify user is ADMIN
@@ -444,7 +444,7 @@ export const assignForensic = async (req, res) => {
 
     const caseData = await Case.findByIdAndUpdate(
       caseId,
-      { assignedForensic: forensicUserId, status: 'IN_FORENSIC_ANALYSIS' },
+      { assignedForensic: forensicOfficerId, status: 'IN_FORENSIC_ANALYSIS' },
       { new: true }
     ).populate('assignedForensic', 'username');
 
@@ -473,7 +473,7 @@ export const assignForensic = async (req, res) => {
 // Assign judge
 export const assignJudge = async (req, res) => {
   try {
-    const { caseId, judgeUserId } = req.body;
+    const { caseId, judgeId } = req.body;
     const userId = req.user.userId;
 
     // Verify user is ADMIN
@@ -484,7 +484,7 @@ export const assignJudge = async (req, res) => {
 
     const caseData = await Case.findByIdAndUpdate(
       caseId,
-      { assignedJudge: judgeUserId, status: 'HEARING' },
+      { assignedJudge: judgeId, status: 'HEARING' },
       { new: true }
     ).populate('assignedJudge', 'username');
 
