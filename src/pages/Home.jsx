@@ -5,6 +5,7 @@ export default function Home() {
   const navigate = useNavigate()
   const [searchCaseId, setSearchCaseId] = useState('')
   const [caseStatus, setCaseStatus] = useState('')
+  const [quickActionResult, setQuickActionResult] = useState(null)
   const [selectedState, setSelectedState] = useState(null)
   const [activityFeed] = useState([
     { id: 1, action: 'FIR registered in Chennai', time: '2 mins ago', icon: '📝' },
@@ -40,7 +41,68 @@ export default function Home() {
 
   const handleSearchCase = () => {
     if (searchCaseId.trim()) {
+      setQuickActionResult(null)
       setCaseStatus(`Case #${searchCaseId} - Status: Under Forensic Review | Evidence: Verified | Next: Judicial Review`)
+    }
+  }
+
+  const handleVerifyEvidence = () => {
+    if (searchCaseId.trim()) {
+      setCaseStatus('')
+      setQuickActionResult({
+        type: 'verify',
+        icon: '🔒',
+        color: 'blue',
+        title: `Evidence Verification — Case #${searchCaseId}`,
+        lines: [
+          '✓ Blockchain hash match confirmed',
+          '✓ IPFS content integrity: 100%',
+          '✓ Tamper-proof seal: Active',
+          '✓ Chain of custody: Unbroken',
+        ],
+      })
+    } else {
+      navigate('/login')
+    }
+  }
+
+  const handleAuditTrail = () => {
+    if (searchCaseId.trim()) {
+      setCaseStatus('')
+      setQuickActionResult({
+        type: 'audit',
+        icon: '📋',
+        color: 'purple',
+        title: `Audit Trail — Case #${searchCaseId}`,
+        lines: [
+          '🔵 FIR Registered by Police Officer',
+          '🟣 Evidence Uploaded & IPFS Sealed',
+          '🟠 Forensic Analysis Completed',
+          '🔴 Judicial Review Scheduled',
+        ],
+      })
+    } else {
+      navigate('/login')
+    }
+  }
+
+  const handleTrackCase = () => {
+    if (searchCaseId.trim()) {
+      setCaseStatus('')
+      setQuickActionResult({
+        type: 'track',
+        icon: '📡',
+        color: 'emerald',
+        title: `Case Tracker — Case #${searchCaseId}`,
+        lines: [
+          `Case ID: #${searchCaseId}`,
+          'Current Stage: Forensic Review',
+          'Evidence Items: 4 items verified',
+          'Estimated Completion: 7 days',
+        ],
+      })
+    } else {
+      navigate('/login')
     }
   }
 
@@ -232,19 +294,44 @@ export default function Home() {
                   <p className="font-semibold">✓ {caseStatus}</p>
                 </div>
               )}
+              {quickActionResult && (
+                <div className={`rounded-2xl p-4 text-sm border ${
+                  quickActionResult.color === 'blue'
+                    ? 'bg-blue-500/20 border-blue-400/40'
+                    : quickActionResult.color === 'purple'
+                    ? 'bg-purple-500/20 border-purple-400/40'
+                    : 'bg-emerald-500/20 border-emerald-400/40'
+                }`}>
+                  <p className="font-bold mb-2">{quickActionResult.icon} {quickActionResult.title}</p>
+                  <ul className="space-y-1">
+                    {quickActionResult.lines.map((line, i) => (
+                      <li key={i} className="text-white/90">{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
               <label className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">Quick Actions</label>
               <div className="space-y-3">
-                <button className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20">
-                  Verify Evidence
+                <button
+                  onClick={handleVerifyEvidence}
+                  className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20 active:scale-95"
+                >
+                  🔒 Verify Evidence
                 </button>
-                <button className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20">
-                  Audit Trail
+                <button
+                  onClick={handleAuditTrail}
+                  className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20 active:scale-95"
+                >
+                  📋 Audit Trail
                 </button>
-                <button className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20">
-                  Track Case
+                <button
+                  onClick={handleTrackCase}
+                  className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20 active:scale-95"
+                >
+                  📡 Track Case
                 </button>
               </div>
             </div>
