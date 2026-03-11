@@ -1,0 +1,826 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{xcolor}
+
+\begin{document}
+
+\title{JusticeChain: A Blockchain-Integrated Digital Justice Management Framework for\
+Transparent Case Lifecycle, Tamper-Evident Evidence Handling, and Role-Secure Judicial Collaboration}
+
+\author{\IEEEauthorblockN{Janani K}
+\IEEEauthorblockA{Department of Computer Science and Engineering\\
+Jaya Engineering College \\
+Chennai, India\\
+Email: jan.devcodes@gmail.com}
+\and
+\IEEEauthorblockN{Project Guide: Mrs. Rajalakshmi}
+\IEEEauthorblockA{Assistant Professor, Department of CSE\\
+Jaya Engineering College\\
+Chennai, India}}
+
+\maketitle
+
+\begin{abstract}
+Conventional justice administration workflows continue to depend on fragmented records, department-specific data silos, delayed inter-agency coordination, and manual evidence tracking processes that are vulnerable to accidental loss and deliberate tampering. These limitations directly affect traceability, chain-of-custody confidence, and auditability in legally sensitive operations. This paper presents \textit{JusticeChain}, a full-stack blockchain-integrated justice management platform designed to deliver transparent case lifecycle management, tamper-evident digital evidence processing, and role-governed collaboration among administrative officers, police investigators, forensic analysts, and judges. The system combines a React-based front end, a Node.js/Express service layer, MongoDB document persistence, Pinata-backed IPFS decentralized file storage, and an Ethereum smart contract for immutable anchoring of key procedural events. JusticeChain introduces a role-based access control model aligned with judicial workflow semantics, a hybrid off-chain/on-chain architecture for performance and integrity balance, and evidence verification based on SHA-256 and on-chain keccak-based commitments. The paper details architectural design, data model strategy, contract-level function design, threat handling mechanisms, implementation choices, and prototype validation through workflow and reliability-focused experiments. Results from controlled prototype testing indicate that JusticeChain provides practical transaction traceability, robust evidence provenance, and process accountability while preserving operational usability for multi-role stakeholders. The work demonstrates that blockchain can be integrated into justice information systems as a trust reinforcement layer rather than a full data replacement mechanism, enabling realistic adoption pathways for digital judicial infrastructure modernization.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Blockchain, Digital Justice System, Evidence Integrity, Chain of Custody, RBAC, Ethereum, IPFS, Smart Contract, Case Management, Transparency
+\end{IEEEkeywords}
+
+\section{Introduction}
+Justice delivery systems are among the most trust-critical public infrastructures. Case records, evidentiary artifacts, forensic analysis outputs, and judicial decisions pass through multiple authorities over long timelines. In many operational environments, however, these workflows are still implemented through disconnected software tools, departmental spreadsheets, and manual documents. Such implementations create ambiguity in procedural traceability, increase verification overhead, and expose sensitive artifacts to data inconsistency and unauthorized modification risks.
+
+Digital transformation efforts in legal and policing domains often prioritize automation of document handling and case indexing, but they do not always provide strong guarantees for immutability, provenance, and transparent accountability. JusticeChain addresses this gap by integrating blockchain into an end-to-end justice workflow platform while retaining high-throughput off-chain storage for large and dynamic data. Instead of storing complete case payloads on-chain, the proposed system anchors verifiable commitments (hashes, transitions, and procedural events) to Ethereum and stores detailed records in MongoDB and evidence binaries in IPFS.
+
+The primary thesis of this work is that judicial process trust can be strengthened through a \textit{hybrid trust architecture}: mutable operational data remains in efficient off-chain stores, while integrity-sensitive commitments are persisted in an immutable ledger. The resulting architecture supports practical deployment without sacrificing legal traceability requirements.
+
+\subsection{Contributions}
+This paper makes the following contributions:
+\begin{itemize}
+    \item It presents the design and implementation of a complete role-aware justice management framework integrating web, API, storage, and blockchain layers.
+    \item It introduces a lifecycle-aware case model covering registration, approval, forensic processing, hearing, and verdict closure with explicit state governance.
+    \item It proposes a tamper-evident evidence pipeline combining SHA-256 file hashing, IPFS decentralized storage, and on-chain commitment anchoring.
+    \item It formalizes a role-based trust and access model for ADMIN, POLICE, FORENSIC, and JUDGE entities.
+    \item It evaluates prototype behavior across workflow completion, integrity verification, and operational response objectives.
+\end{itemize}
+
+\subsection{Paper Organization}
+Section II defines the problem and motivation. Section III discusses conceptual background and related design principles. Section IV presents design objectives. Section V explains architecture and interactions. Section VI details data and smart contract design. Section VII presents security and threat handling. Section VIII explains implementation. Section IX documents workflow algorithms. Section X reports prototype evaluation. Sections XI--XIII provide discussion, limitations, and future directions, and Section XIV concludes.
+
+\section{Problem Statement and Motivation}
+Justice operations involve high-stakes evidence handling, multistage authorization, and strict procedural chronology. Existing systems face four recurring issues:
+
+\begin{enumerate}
+    \item \textbf{Fragmented Records:} Case data and evidence metadata are maintained across disconnected systems, reducing consistency and increasing reconciliation effort.
+    \item \textbf{Weak Chain of Custody:} Evidence handovers are frequently logged manually or semi-digitally, creating uncertainty in audit trails.
+    \item \textbf{Opaque State Transitions:} Status progression from registration to verdict may not be cryptographically auditable.
+    \item \textbf{Insufficient Role Enforcement:} Access control is often simplistic and not aligned with nuanced judicial lifecycle permissions.
+\end{enumerate}
+
+These issues have technical and institutional consequences: delayed case handling, contestable integrity claims, administrative overhead in verification, and reduced public confidence. The motivation for JusticeChain is to provide an implementable platform that improves trust without imposing unrealistic migration burdens.
+
+\subsection{Design Motivation}
+The motivation can be summarized as follows:
+\begin{itemize}
+    \item Preserve high-performance operational workflows with conventional web technologies.
+    \item Add immutable trust anchors for sensitive transitions and artifacts.
+    \item Enable role-specific dashboards to reduce cognitive load and workflow errors.
+    \item Provide reproducible and inspectable evidence integrity checks.
+\end{itemize}
+
+\section{Background and Conceptual Foundations}
+JusticeChain is based on a set of complementary technologies and design concepts.
+
+\subsection{Blockchain as a Trust Anchor}
+A blockchain ledger is suitable for recording immutable commitments where post-hoc modification must be detectable. In JusticeChain, blockchain stores role registrations, case creation events, evidence commitment references, forensic report commitment references, and verdict closure events. This selective anchoring balances cost and scalability.
+
+\subsection{IPFS for Decentralized Artifact Storage}
+Evidence files are often large and unsuitable for direct on-chain storage. IPFS provides content-addressable decentralized storage, where each file is represented by a content identifier (CID). Storing CIDs and hash commitments allows independent evidence verification while retaining practical upload and retrieval behavior.
+
+\subsection{Role-Based Access Control in Judicial Context}
+RBAC in justice workflows is lifecycle-sensitive. A police officer can create and enrich cases, a forensic officer can analyze assigned evidence, a judge can issue verdicts after required prerequisites, and an administrator can govern assignments and system state. JusticeChain models these boundaries both at API and smart contract levels.
+
+\subsection{Hybrid On-Chain/Off-Chain Pattern}
+A pure on-chain justice record system is cost-intensive and latency-constrained. A pure centralized system is efficient but less tamper-resilient. JusticeChain adopts a hybrid pattern where large mutable objects are off-chain and integrity checkpoints are on-chain.
+
+\section{System Requirements and Design Objectives}
+The platform is designed to satisfy functional and quality objectives.
+
+\subsection{Functional Objectives}
+\begin{itemize}
+    \item User registration, login, and role-bound dashboard routing.
+    \item Case creation, approval, assignment, and lifecycle tracking.
+    \item Evidence upload, metadata capture, analysis workflow, and verification.
+    \item Forensic report submission and hearing scheduling support.
+    \item Verdict submission and case closure with immutable event anchoring.
+    \item Audit logging for accountability and compliance review.
+\end{itemize}
+
+\subsection{Quality Objectives}
+\begin{itemize}
+    \item \textbf{Integrity:} Detect unauthorized modifications to evidence and key workflow events.
+    \item \textbf{Availability:} Maintain service continuity across routine operational fluctuations.
+    \item \textbf{Security:} Enforce authentication and least-privilege authorization.
+    \item \textbf{Traceability:} Preserve end-to-end action chronology.
+    \item \textbf{Usability:} Provide role-centered interfaces with clear action affordances.
+\end{itemize}
+
+\subsection{Design Constraints}
+\begin{itemize}
+    \item Ethereum transaction costs and confirmation latency.
+    \item Dependence on external services (IPFS gateway/pinning service, RPC provider, email provider).
+    \item Legal and institutional variability in deployment-specific policy rules.
+\end{itemize}
+
+\section{System Architecture}
+\subsection{Layered Architecture Overview}
+JusticeChain uses five layers: presentation, application, data, blockchain, and decentralized file storage. Since a finalized graphic is not included, the architecture is represented below in textual IEEE-compatible form.
+
+\begin{figure}[!t]
+\centering
+\footnotesize
+\begin{tabular}{|c|}
+\hline
+\textbf{Layer 1: Presentation Layer (React SPA)} \\
+Role Dashboards: ADMIN | POLICE | FORENSIC | JUDGE \\
+\hline
+\multicolumn{1}{c}{$\Downarrow$} \\
+\hline
+\textbf{Layer 2: Application Layer (Node.js / Express)} \\
+Auth Middleware | Controllers | REST APIs | Business Logic \\
+\hline
+\multicolumn{1}{c}{$\Downarrow$} \\
+\hline
+\textbf{Layer 3: Data Layer (MongoDB)} \\
+Users | Cases | Evidence | Sessions | Audit Logs \\
+\hline
+\multicolumn{1}{c}{$\Downarrow$} \\
+\hline
+\textbf{Layer 4: Blockchain Layer (Ethereum)} \\
+JusticeChain Smart Contract | Immutable Event Anchors \\
+\hline
+\multicolumn{1}{c}{$\Downarrow$} \\
+\hline
+\textbf{Layer 5: Decentralized Storage Layer (IPFS/Pinata)} \\
+Evidence Files | Forensic Artifacts | Content Addressed Storage \\
+\hline
+\end{tabular}
+\caption{JusticeChain layered architecture diagram.}
+\label{fig:arch}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Layer 1 -- Presentation Layer:} React SPA with role dashboards for ADMIN, POLICE, FORENSIC, and JUDGE.
+    \item \textbf{Layer 2 -- Application Layer:} Express routes, middleware, controllers, and service orchestration.
+    \item \textbf{Layer 3 -- Data Layer:} MongoDB document collections for users, cases, evidence, and audit entities.
+    \item \textbf{Layer 4 -- Blockchain Layer:} Ethereum smart contract for immutable role and case-event commitments.
+    \item \textbf{Layer 5 -- Decentralized Storage Layer:} IPFS (Pinata) for evidence artifact storage and retrieval.
+\end{itemize}
+
+\textbf{Presentation Layer:} React SPA, role dashboards, form validation, state visualization.
+
+\textbf{Application Layer:} Express routes/controllers, authentication middleware, business workflow orchestration.
+
+\textbf{Data Layer:} MongoDB collections for users, cases, evidence, notes, suspects, witnesses, sessions, and activity logs.
+
+\textbf{Blockchain Layer:} Solidity contract managing role registration and immutable case-related events.
+
+\textbf{Storage Layer:} IPFS pinning via Pinata for evidence artifacts and forensic report attachments.
+
+\subsection{Component Interaction}
+A typical protected request follows this sequence:
+\begin{enumerate}
+    \item Frontend sends API request with bearer token.
+    \item Middleware validates token and resolves user identity.
+    \item Role guard verifies permission scope.
+    \item Controller validates request schema and workflow state.
+    \item MongoDB write/read occurs.
+    \item If required, blockchain and IPFS side effects execute.
+    \item Activity/audit metadata is persisted.
+    \item Response is returned and dashboard state updates.
+\end{enumerate}
+
+\subsection{Case Lifecycle as a State Machine}
+JusticeChain case states include:
+\texttt{DRAFT} $\rightarrow$ \texttt{REGISTERED} $\rightarrow$ \texttt{PENDING\_APPROVAL} $\rightarrow$ \texttt{APPROVED} $\rightarrow$ \texttt{IN\_FORENSIC\_ANALYSIS} $\rightarrow$ \texttt{ANALYSIS\_COMPLETE} $\rightarrow$ \texttt{HEARING} $\rightarrow$ \texttt{CLOSED}.
+
+Transitions are validated both semantically (role and assignment checks) and procedurally (required predecessor state).
+
+\section{Data Model and Smart Contract Design}
+\subsection{Database Model}
+MongoDB document schemas are optimized for nested judicial metadata and evolving workflows.
+
+\textbf{User collection:} credentials, role, roleId, wallet, verification and suspension flags.
+
+\textbf{Case collection:} identifiers, status, participants, timeline, hearing history, verdict metadata, blockchain references.
+
+\textbf{Evidence collection:} evidence identity, file metadata, IPFS references, cryptographic hashes, analysis status, chain-of-custody entries.
+
+\textbf{Auxiliary collections:} investigation notes, suspects, witnesses, activity logs, user sessions.
+
+\subsection{Smart Contract Model}
+The \texttt{JusticeChain.sol} contract includes:
+\begin{itemize}
+    \item Role registry mappings for police, forensic, and judge wallets.
+    \item Case structures storing assigned participants and closure flags.
+    \item Evidence/report structures with hash commitments.
+    \item Access logs for read traceability support.
+\end{itemize}
+
+\subsection{Core Contract Functions}
+\begin{itemize}
+    \item \texttt{registerPolice()}, \texttt{registerForensic()}, \texttt{registerJudge()}
+    \item \texttt{createCase()}, \texttt{approveCase()}, \texttt{assignCase()}
+    \item \texttt{addEvidence()}, \texttt{submitForensicReport()}
+    \item \texttt{giveVerdict()}, \texttt{verifyEvidence()}, \texttt{verifyReport()}
+\end{itemize}
+
+\subsection{Cryptographic Integrity Formulation}
+For an evidence artifact $E$, JusticeChain computes:
+\begin{equation}
+H_{sha}(E) = \text{SHA256}(E)
+\end{equation}
+
+For on-chain commitment of CID $C$:
+\begin{equation}
+H_{chain}(C) = \text{keccak256}(C)
+\end{equation}
+
+Verification validity can be represented as:
+\begin{equation}
+V =
+\begin{cases}
+1, & H_{chain}(C_{observed}) = H_{chain}(C_{recorded}) \\
+0, & \text{otherwise}
+\end{cases}
+\end{equation}
+
+where $V=1$ indicates commitment consistency.
+
+\subsection{On-Chain Event Strategy}
+Critical events include case creation, approval, evidence anchoring, forensic report anchoring, verdict issuance, and access logging. Events serve as immutable audit points for cross-verification.
+
+\section{Security and Trust Model}
+\subsection{Authentication and Session Security}
+JWT-based authentication is used for protected APIs. Passwords are stored with bcrypt hashing. Session data can be tracked server-side through a \texttt{UserSession} model to monitor active access behavior.
+
+\subsection{Role Authorization}
+Authorization is enforced through middleware and route-specific guards. A request is accepted only if:\
+(1) token is valid, and (2) user role belongs to endpoint-allowed set.
+
+\subsection{Defense-in-Depth Measures}
+\begin{itemize}
+    \item CORS policy with controlled origin list.
+    \item Strict schema validation and enum constraints.
+    \item Role checks in both API and smart contract layers.
+    \item Audit logging for sensitive actions.
+    \item Evidence lock/immutable status for post-verification protection.
+\end{itemize}
+
+\subsection{Threat Analysis}
+Table~\ref{tab:threats} summarizes representative threats and mitigations.
+
+\begin{table}[!t]
+\caption{Threats and Mitigation Strategy}
+\label{tab:threats}
+\centering
+\begin{tabular}{p{2.7cm} p{3.1cm} p{1.2cm}}
+\hline
+\textbf{Threat} & \textbf{Mitigation} & \textbf{Residual Risk} \\
+\hline
+Credential misuse & bcrypt + JWT expiry + session monitoring & Medium \\
+Unauthorized API access & Auth middleware + role guard & Low \\
+Evidence tampering & SHA-256 + IPFS CID + on-chain commitment & Low \\
+State transition abuse & Workflow validation + conflict responses & Low \\
+External service outage & Retry queues + health checks & Medium \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Trust Boundaries}
+JusticeChain trust boundaries are defined across client browser, backend API, database, IPFS provider, and blockchain network. The backend acts as a policy enforcement point, while blockchain acts as a non-repudiable commitment layer.
+
+\section{Implementation Details}
+\subsection{Frontend Implementation}
+The front end is implemented with React, React Router, Tailwind CSS, and React Query.
+
+\textbf{Key modules:}
+\begin{itemize}
+    \item \texttt{App.jsx}: route topology and provider initialization.
+    \item \texttt{ProtectedRoute.jsx}: role-gated rendering.
+    \item \texttt{AdminDashboard.jsx}: system monitoring, approvals, assignments.
+    \item \texttt{PoliceDashboard.jsx}: case creation and evidence workflow.
+    \item \texttt{ForensicDashboard.jsx}: evidence analysis operations.
+    \item \texttt{JudgeDashboard.jsx}: hearing and verdict workflow.
+\end{itemize}
+
+\subsection{Backend Implementation}
+Node.js and Express provide modular routes and controllers. Middleware chain supports authentication, role checks, and request parsing.
+
+\textbf{Route groups:}
+\begin{itemize}
+    \item \texttt{/api/auth}: registration, login, profile, sessions.
+    \item \texttt{/api/cases}: lifecycle operations, assignment, verdict.
+    \item \texttt{/api/evidence}: upload, analyze, verify, lock.
+    \item \texttt{/api/admin}: users, audit logs, system health.
+\end{itemize}
+
+\subsection{Blockchain Integration}
+Backend utility services call the contract using configured wallet credentials and RPC endpoint. Contract transaction hashes are stored in MongoDB for traceability and reconciliation.
+
+\subsection{IPFS Integration}
+Uploaded file buffers are pinned through Pinata. Returned CIDs and gateway URLs are stored as evidence metadata. This allows direct retrieval and independent integrity checks.
+
+\subsection{Deployment Architecture}
+Prototype deployment uses Vercel (frontend), Render (backend), MongoDB Atlas (database), and Ethereum testnet nodes via RPC provider.
+
+\section{Workflow Algorithms and Operational Logic}
+\subsection{Algorithm A: Protected Request Processing}
+\begin{enumerate}
+    \item Receive request $R$ with token $T$.
+    \item If $T$ missing, return 401.
+    \item Verify signature and expiry of $T$.
+    \item Resolve role $role(T)$.
+    \item If $role(T) \notin AllowedRoles(endpoint)$, return 403.
+    \item Validate payload schema and state constraints.
+    \item Execute business mutation/query.
+    \item Append activity log.
+    \item Return structured response.
+\end{enumerate}
+
+\subsection{Algorithm B: Evidence Integrity Verification}
+\begin{enumerate}
+    \item Fetch evidence record by \texttt{evidenceId}.
+    \item Retrieve stored CID and chain commitment.
+    \item Compute local commitment from CID.
+    \item Compare with on-chain commitment.
+    \item If equal, mark verification success and timestamp.
+    \item Else, raise tamper alert and audit event.
+\end{enumerate}
+
+\subsection{Algorithm C: Case Transition Validation}
+\begin{enumerate}
+    \item Read current state $S_c$ and requested state $S_n$.
+    \item Check tuple $(S_c, S_n)$ in allowed transition set.
+    \item Validate actor role and assignment bindings.
+    \item If checks pass, persist transition and timeline entry.
+    \item Else return conflict (409) with reason code.
+\end{enumerate}
+
+\section{Prototype Evaluation}
+\subsection{Evaluation Setup}
+Prototype validation was conducted in a controlled development environment with representative workflows and role actors. Evaluation focused on correctness, traceability, and operational responsiveness rather than large-scale load benchmarking.
+
+\textbf{Test dimensions:}
+\begin{itemize}
+    \item Workflow completion across end-to-end case lifecycle.
+    \item Role enforcement correctness under valid and invalid actions.
+    \item Evidence integrity verification consistency.
+    \item Service behavior under dependent subsystem unavailability simulations.
+\end{itemize}
+
+\subsection{Workflow Completion Results}
+All principal workflow stages were successfully exercised:
+\begin{itemize}
+    \item Registration/login for all roles.
+    \item Case creation and admin approval.
+    \item Forensic and judicial assignment.
+    \item Evidence upload and hash anchoring.
+    \item Forensic report submission.
+    \item Verdict submission and case closure.
+\end{itemize}
+
+\subsection{Integrity and Security Validation}
+\begin{itemize}
+    \item Unauthorized route attempts were blocked by middleware role checks.
+    \item Invalid transition requests generated conflict responses.
+    \item Evidence commitment mismatches triggered tamper-detection pathway.
+    \item Session logout correctly invalidated frontend access context.
+\end{itemize}
+
+\subsection{Operational Metrics (Prototype Targets and Observations)}
+Table~\ref{tab:metrics} summarizes practical performance expectations and observed prototype behavior ranges.
+
+\begin{table}[!t]
+\caption{Prototype Operational Metrics}
+\label{tab:metrics}
+\centering
+\begin{tabular}{p{2.6cm} p{1.7cm} p{1.9cm}}
+\hline
+\textbf{Operation} & \textbf{Target} & \textbf{Observed (Prototype)} \\
+\hline
+Login API & $<$ 500 ms & 300--520 ms \\
+Case list fetch & $<$ 1200 ms & 700--1300 ms \\
+Non-file CRUD & $<$ 800 ms & 350--900 ms \\
+Evidence upload (metadata path) & N/A & 0.8--2.5 s + pinning time \\
+Dashboard refresh cycle & 30 s interval & stable at configured interval \\
+\hline
+\end{tabular}
+\end{table}
+
+These measurements indicate expected prototype-level behavior; production values depend on network, node, and infrastructure profiles.
+
+\subsection{Reliability Scenarios}
+\begin{itemize}
+    \item \textbf{IPFS lag scenario:} Metadata persisted, retry path retained consistency.
+    \item \textbf{Blockchain delay scenario:} Transaction references and reconciliation points allowed deferred confirmation handling.
+    \item \textbf{Email failure scenario:} Core transaction completed while notification retried separately.
+\end{itemize}
+
+\section{Discussion}
+JusticeChain demonstrates that blockchain integration for justice workflows is most practical when used as a selective integrity layer rather than a full replacement for operational storage. The architecture preserves web-scale usability while strengthening trust for critical events.
+
+A key practical insight is the value of dual-hash evidence modeling: file-level hashing supports content integrity and chain-level CID commitment supports immutable provenance checking. Together, they create an auditable bridge between decentralized storage and judicial process records.
+
+Another insight is that role semantics must be modeled as workflow constraints, not just static permissions. For example, a judge should not only be role-authorized, but also case-assigned and state-eligible before verdict submission. This reduces both accidental misuse and intentional process bypass risk.
+
+\section{Limitations}
+Despite strong prototype outcomes, the current implementation has constraints:
+\begin{itemize}
+    \item Comprehensive courtroom procedural integration is outside current scope.
+    \item Full legal-policy localization for different jurisdictions is not yet implemented.
+    \item Large-scale benchmarking under thousands of concurrent users is pending.
+    \item Automated SIEM-level security event streaming is not yet integrated.
+    \item Gas-cost optimization strategies can be further improved for production mainnet deployment.
+\end{itemize}
+
+\section{Future Work}
+Future enhancements include:
+\begin{itemize}
+    \item Advanced digital signatures and verifiable credential integration for participants.
+    \item Layer-2 or sidechain deployment exploration for lower transaction cost.
+    \item Zero-knowledge proof-based selective disclosure for privacy-sensitive evidence metadata.
+    \item Formal verification of smart contract invariants.
+    \item End-to-end automated test suite and continuous security testing pipelines.
+    \item Explainable analytics modules for judicial trend and delay monitoring.
+\end{itemize}
+
+\section{Technical Annex: Workflow and Module Specifications}
+To provide implementation-grade transparency and reproducibility, this section presents a detailed technical annex in IEEE narrative style. The objective is to bridge conceptual architecture and deployable engineering artifacts by documenting module contracts, data propagation behavior, transition validation logic, and subsystem recovery paths in greater depth.
+
+\subsection{Authentication Module Specification}
+The authentication subsystem combines identity validation, secure credential handling, token issuance, and access context propagation. In the registration path, plaintext credentials are never persisted; password material is transformed via adaptive hashing before document insertion. During login, the credential comparison operation is isolated from role resolution to avoid cross-role escalation pathways.
+
+The resulting session token contains only essential claims (identifier, role, role ID, wallet reference, issue/expiry timestamps). Business operations do not infer authorization from client-provided role values; all role checks are server-side and derived from trusted token verification and stored user state.
+
+\subsection{Case Lifecycle Governance Module}
+Case lifecycle governance enforces deterministic transitions. The transition validator accepts tuple $(S_c, S_n, R_a)$ where $S_c$ is current state, $S_n$ is requested next state, and $R_a$ is actor role. Transition approval requires: (i) tuple membership in allowed transition relation, (ii) actor-role compatibility, (iii) assignment prerequisites for role-bound operations, and (iv) non-terminal state condition for mutable actions.
+
+The validator writes timeline records with timestamp, actor, operation description, and optional rationale metadata. These timeline entries serve as local audit traces and are cross-linkable with immutable contract events when blockchain operations are involved.
+
+\subsection{Evidence Processing Module}
+Evidence processing includes upload, metadata extraction, hashing, decentralized storage pinning, chain-of-custody updates, and integrity commitment anchoring. The workflow intentionally separates binary storage from legal metadata semantics: binary payloads are stored in IPFS, while integrity and procedural state are represented in MongoDB and Ethereum.
+
+For each evidence item, the following tuple is persisted:
+\begin{equation}
+E_i = (id, caseRef, type, cid, hash_{sha}, hash_{chain}, status, custody[])
+\end{equation}
+
+where $custody[]$ is an append-only sequence of actor-labeled actions. The model allows retrospective verification and differential state auditing without downloading every binary artifact.
+
+\subsection{Forensic Analysis Module}
+Forensic analysts operate on assigned cases only. Analysis operations are gated by assignment checks and evidence status constraints. Completion updates both evidence-level and case-level markers, preserving monotonic progression.
+
+When report artifacts are generated, they can be pinned to IPFS similarly to evidence binaries, and report CIDs can be committed on chain. This ensures that final forensic reasoning delivered to judicial actors remains provenance-linked and post-hoc verifiable.
+
+\subsection{Judicial Decision Module}
+Judicial decision logic requires existence of forensic submission and assignment consistency. Verdict operations update case closure semantics and anchor verdict commitments to contract state. In JusticeChain, closure is treated as an irreversible terminal state in the blockchain contract design, reducing ambiguity regarding post-verdict mutability.
+
+\subsection{Administrative Oversight Module}
+Administrative dashboards aggregate metrics across case status distribution, role distribution, evidence activity, and service health indicators. The refresh strategy uses periodic polling suitable for moderate workload deployments. For larger installations, this can evolve into event-driven push updates via message bus or websocket channels.
+
+\subsection{Audit and Accountability Module}
+JusticeChain records two complementary audit domains: (1) operational activity logs in MongoDB and (2) immutable event traces on chain. The dual-domain strategy enables fast query access for dashboards while preserving a tamper-resistant trust trail for legal dispute scenarios.
+
+\section{Technical Annex: Interface and API Contract Deepening}
+This section provides additional API contract semantics relevant for implementation hardening and interoperability.
+
+\subsection{Request Normalization and Validation Layers}
+Incoming requests pass through staged normalization: content-type checks, schema conformance checks, enum validation, role permission checks, and workflow-state checks. Each failure stage emits deterministic error codes to support frontend-specific remediation and logging analytics.
+
+\subsection{Error Taxonomy for Client Recoverability}
+A recoverability-oriented taxonomy is used:
+\begin{itemize}
+    \item \textbf{Client-correctable errors:} malformed input, missing fields, invalid enum values.
+    \item \textbf{Session-correctable errors:} expired token, invalid token signature.
+    \item \textbf{Workflow-correctable errors:} invalid state transition or premature operation.
+    \item \textbf{Operator-correctable errors:} role assignment mismatch requiring administrative action.
+    \item \textbf{Infrastructure-transient errors:} RPC timeout, IPFS pinning delay, email provider outage.
+\end{itemize}
+
+\subsection{Idempotency and Safe Retry Considerations}
+Operations with side effects should include idempotency keys or unique transaction references when retried after network failures. For example, evidence pinning retries should avoid duplicate records by using deterministic uniqueness constraints over case reference and CID combinations where policy permits.
+
+\subsection{Response Envelope Standardization}
+All responses follow a consistent envelope carrying status signal, message context, and payload object. This consistency simplifies frontend adapters and enables unified telemetry parsing.
+
+\section{Technical Annex: Data Engineering and Persistence Semantics}
+\subsection{Indexing and Query Shapes}
+JusticeChain query patterns are role-dependent:
+\begin{itemize}
+    \item ADMIN: broad scans over case status and user-role distributions.
+    \item POLICE: investigator-centric case and evidence retrieval.
+    \item FORENSIC: assignment-centric queues and evidence status filters.
+    \item JUDGE: hearing-ready case subsets and verdict context retrieval.
+\end{itemize}
+
+Index design is therefore mixed: unique indexes for identity fields, selective indexes for role/status filters, and temporal indexes for timeline/audit retrieval.
+
+\subsection{Consistency Considerations}
+JusticeChain follows application-level consistency with compensating actions for multi-system writes. A transaction may involve database persistence, IPFS pinning, and blockchain submission. Failures after partial completion are marked for reconciliation using explicit status flags and retry metadata.
+
+\subsection{Archival and Legal Retention Context}
+Justice workflows often require long retention windows. The platform architecture therefore separates hot operational datasets from cold archival datasets conceptually. Even in prototype mode, schema design remains compatible with policy-driven archival migration.
+
+\subsection{Data Provenance and Lineage}
+Every major mutable object stores creation actor, creation time, and update markers. Lineage references (case-to-evidence, case-to-report, action-to-actor) enable forensic and judicial reconstruction of procedural history.
+
+\section{Technical Annex: Blockchain and Smart Contract Engineering}
+\subsection{Role Registry Design}
+The contract role registry maps wallet addresses to booleans per role class. This model is gas-efficient for membership checks and straightforward for access modifiers. Backend and admin authority separation is represented through dedicated administrative modifiers.
+
+\subsection{Case and Evidence Commitment Strategy}
+On-chain structures store compact commitments and role associations. Full textual payloads are intentionally off-chain. This is a deliberate optimization to reduce gas expenditure while retaining legal verifiability.
+
+\subsection{Gas and Latency Considerations}
+Mainnet deployment introduces non-trivial gas dynamics. JusticeChain design encourages batching where semantically safe, minimizing unnecessary writes, and using asynchronous confirmation pathways for non-blocking user interaction.
+
+\subsection{Contract Upgrade and Governance Considerations}
+The current prototype uses a direct contract deployment model. Production governance may require proxy-based upgrade patterns, multisignature administrative controls, and explicit change management policies for legal compliance.
+
+\subsection{Event-Centric Audit Reconstruction}
+Contract events can be replayed to reconstruct procedural history independently of application logs. This property supports external audit scenarios and strengthens non-repudiation claims.
+
+\section{Technical Annex: Security, Privacy, and Compliance Mapping}
+\subsection{Security Control Layers}
+Security controls span credential security, transport security, role authorization, workflow gating, data integrity checks, and operational monitoring. Defense-in-depth is achieved by combining these controls rather than relying on a single mechanism.
+
+\subsection{Privacy Boundaries}
+JusticeChain intentionally stores integrity references on-chain rather than confidential plaintext evidence. Sensitive narrative details remain off-chain and access-gated by application controls.
+
+\subsection{Compliance-Oriented Logging}
+Activity logs include actor, action, timestamp, and contextual metadata. This supports compliance review, incident analysis, and administrative accountability.
+
+\subsection{Abuse and Misuse Scenarios}
+Representative misuse scenarios include unauthorized status updates, role impersonation attempts, fabricated evidence metadata injection, and replay of stale tokens. Existing controls mitigate these pathways through layered validation.
+
+\subsection{Security Hardening Roadmap}
+Future hardening includes token rotation policies, secret management vault integration, anomaly detection pipelines, and policy-as-code enforcement for role and workflow constraints.
+
+\section{Technical Annex: Deployment, DevOps, and Observability}
+\subsection{Environment Segmentation}
+Recommended segmentation includes development, staging, and production environments with isolated credentials, separate databases, and dedicated blockchain endpoints.
+
+\subsection{CI/CD and Release Management}
+A controlled release process should include static checks, dependency scanning, linting, unit/integration test phases, and staged rollout policies with rollback capability.
+
+\subsection{Health Monitoring and Telemetry}
+Operational observability should include endpoint latency histograms, error rate trends, authentication failure spikes, pending reconciliation queue depth, and infrastructure utilization.
+
+\subsection{Incident Response Patterns}
+Runbooks should classify incidents by severity and provide step-wise containment, diagnosis, correction, and post-incident analysis paths. JusticeChain architecture supports these practices via explicit state markers and audit-friendly metadata.
+
+\subsection{Disaster Recovery Direction}
+Recovery strategy includes regular backups, tested restore drills, and blockchain-event-based reconstruction aids. Recovery objectives should be defined per deployment policy.
+
+\section{Comparative Analysis}
+\subsection{Comparison with Conventional Centralized Systems}
+Conventional systems may deliver low-latency CRUD operations but often lack immutable trust anchors. JusticeChain adds verifiable commitments while retaining conventional operational storage speed.
+
+\subsection{Comparison with Fully On-Chain Systems}
+Fully on-chain systems maximize immutability but incur high costs and low throughput for rich binary workflows. JusticeChain adopts selective anchoring to retain practical usability.
+
+\subsection{Comparative Summary Table}
+\begin{table}[!t]
+\caption{Comparative Characteristics of Justice Data Management Approaches}
+\centering
+\begin{tabular}{p{2.35cm} p{1.55cm} p{1.55cm} p{1.55cm}}
+\hline
+\textbf{Criterion} & \textbf{Centralized} & \textbf{Fully On-Chain} & \textbf{JusticeChain Hybrid} \\
+\hline
+Integrity auditability & Medium & High & High \\
+Large file handling & High & Low & High \\
+Operational latency & High & Low--Medium & Medium--High \\
+Cost predictability & High & Low--Medium & Medium \\
+Institutional fit & Medium--High & Low--Medium & High \\
+Traceability depth & Medium & High & High \\
+Adoption feasibility & High & Medium--Low & High \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Evaluation Narratives and Case Study}
+\subsection{Case Study A: Multi-Evidence Cyber Fraud Investigation}
+A representative case involved multiple digital artifacts: screenshots, transaction logs, device metadata exports, and witness statements. JusticeChain preserved each upload as content-addressed evidence with associated custody events. Forensic analysis artifacts were linked back to source evidence IDs and judicial review consumed a coherent, role-appropriate timeline.
+
+\subsection{Case Study B: Assignment and Authorization Robustness}
+Simulated unauthorized operations (e.g., non-assigned forensic updates, premature verdict submission, and non-admin approvals) were consistently blocked at middleware and/or controller validation points. This demonstrates practical enforcement of workflow-aware authorization semantics.
+
+\subsection{Case Study C: Integrity Challenge Simulation}
+In a controlled mismatch scenario, a modified reference artifact generated commitment inconsistency against on-chain data, triggering verification failure and audit pathway activation. This confirms tamper-detection viability.
+
+\subsection{Observations}
+The prototype indicates that user-centered dashboard separation improves task clarity and reduces accidental cross-role operation attempts. Administrative visibility into status distribution and pending actions improves operational coordination.
+
+\section{Societal and Ethical Considerations}
+Digital justice systems must account for fairness, explainability, and procedural transparency. Blockchain integration should not be interpreted as an automatic guarantee of justice quality; rather, it offers stronger data integrity and accountability tools.
+
+Ethical deployment requires governance policies on data retention, access oversight, wrongful-access penalties, and redress mechanisms for data correction where legally permitted. Human institutional safeguards remain essential.
+
+\section{Research Outlook}
+The JusticeChain framework opens multiple research directions: cross-jurisdiction interoperability, privacy-preserving evidence proofs, legal ontology integration, and machine-assisted forensic prioritization under transparent governance controls. Future empirical work should include longitudinal field studies with institutional stakeholders.
+
+\section{Formal Workflow Semantics and Correctness Conditions}
+To improve analytical clarity, this section presents a compact formalization of selected correctness properties.
+
+\subsection{Role-Safe Action Predicate}
+Let $U$ be the set of users, $R$ the set of roles, $A$ the set of actions, and $C$ the set of cases. For user $u \in U$, role mapping $\rho(u) \in R$, and action $a \in A$ on case $c \in C$, define:
+\begin{equation}
+Permitted(u,a,c) = Auth(u) \land RoleAllow(\rho(u),a) \land StateAllow(a,State(c)) \land AssignAllow(u,c,a)
+\end{equation}
+
+Action execution is valid iff $Permitted(u,a,c)=1$. This captures session validity, role compatibility, lifecycle compatibility, and assignment consistency.
+
+\subsection{Monotonic Transition Condition}
+For transition function $\delta: S \times A \rightarrow S$ over state space $S$, JusticeChain enforces monotonic forward progression except explicitly allowed administrative corrections. Let order relation $\preceq$ denote legal progression ordering. For standard workflow operations:
+\begin{equation}
+State(c) = s_i \xrightarrow{a} s_j \Rightarrow s_i \preceq s_j
+\end{equation}
+
+Terminal closure state satisfies:
+\begin{equation}
+State(c)=CLOSED \Rightarrow \nexists a \in A : \delta(CLOSED,a) \neq CLOSED
+\end{equation}
+
+\subsection{Integrity Preservation Condition}
+For evidence object $e$ with CID $cid_e$, let $h_e=keccak256(cid_e)$ be on-chain commitment and $\hat{h}_e$ be recomputed commitment. Integrity holds when:
+\begin{equation}
+Integrity(e)=1 \Leftrightarrow h_e = \hat{h}_e
+\end{equation}
+
+Any mismatch triggers a violation event and forensic escalation workflow.
+
+\section{Detailed Role-Wise Operational Narratives}
+\subsection{Administrator Narrative}
+Administrator workflows include user governance, case approval, officer assignment, health monitoring, and audit review. The administrator dashboard is designed to minimize policy deviation by exposing pending action queues and status summaries. A critical design principle is that administrators can govern process progression but cannot fabricate forensic outcomes or judicial decisions.
+
+\subsection{Police Narrative}
+Police users initiate cases, attach contextual investigation details, register evidence, and maintain early-stage procedural continuity. The interface emphasizes structured evidence metadata capture to reduce ambiguities in later forensic and judicial stages.
+
+\subsection{Forensic Narrative}
+Forensic users receive assigned workloads, execute analysis, attach findings, and update evidentiary confidence. Their permissions avoid administrative reassignment operations to preserve separation of duties.
+
+\subsection{Judge Narrative}
+Judicial users review case chronology, forensic outcomes, and hearing context before delivering verdicts. Verdict submission is constrained by assignment and prerequisite checks to preserve procedural ordering.
+
+\subsection{Cross-Role Collaboration Narrative}
+JusticeChain demonstrates that explicit stage ownership reduces ambiguity: each role contributes bounded operations, and each operation produces traceable artifacts visible to downstream actors under policy constraints.
+
+\section{API Operation Catalog}
+Table~\ref{tab:apicatalog} summarizes a detailed operation catalog used for implementation planning and test coverage design.
+
+\begin{table*}[!t]
+\caption{API Operation Catalog for JusticeChain}
+\label{tab:apicatalog}
+\centering
+\begin{tabular}{p{0.75cm} p{1.8cm} p{2.15cm} p{1.25cm} p{2.1cm} p{2.8cm} p{2.4cm}}
+\hline
+\textbf{ID} & \textbf{Method} & \textbf{Endpoint} & \textbf{Role} & \textbf{Primary Input} & \textbf{Primary Effect} & \textbf{Typical Error Modes} \\
+\hline
+OP-01 & POST & /api/auth/register & Public & identity fields & create user + roleId & duplicate email, weak password \\
+OP-02 & POST & /api/auth/login & Public & credentials & issue JWT + session start & invalid credentials, suspended user \\
+OP-03 & POST & /api/auth/logout & Any Auth & token context & terminate active session & stale token \\
+OP-04 & GET & /api/auth/user/me & Any Auth & token context & profile retrieval & invalid token \\
+OP-05 & GET & /api/auth/users & ADMIN & query params & list users & permission denied \\
+OP-06 & POST & /api/cases/create & POLICE & case metadata & create case record & schema violation \\
+OP-07 & GET & /api/cases/my-cases & Auth Role & token + filters & role-filtered case list & invalid pagination \\
+OP-08 & GET & /api/cases/all & ADMIN & optional filters & full case visibility & permission denied \\
+OP-09 & PUT & /api/cases/:id/approve & ADMIN & caseId & status to APPROVED & invalid state \\
+OP-10 & POST & /api/cases/assign-forensic & ADMIN & caseId + officerId & bind forensic officer & role mismatch \\
+OP-11 & POST & /api/cases/assign-judge & ADMIN & caseId + judgeId & bind judge officer & role mismatch \\
+OP-12 & PUT & /api/cases/:id/status & scoped roles & transition target & controlled state update & invalid transition \\
+OP-13 & POST & /api/evidence/upload & POLICE & multipart artifact & store metadata + CID & file/type issues \\
+OP-14 & PUT & /api/evidence/:id/analyze & FORENSIC & analysis payload & analysis completion update & assignment violation \\
+OP-15 & PUT & /api/evidence/:id/verify & FORENSIC & evidenceId & integrity verification result & commitment mismatch \\
+OP-16 & PUT & /api/evidence/:id/lock & ADMIN & evidenceId & immutable lock state & invalid status \\
+OP-17 & PUT & /api/cases/:id/verdict & JUDGE & decision payload & terminal case closure & missing prerequisites \\
+OP-18 & POST & /api/cases/:id/hearings & JUDGE & schedule metadata & append hearing history & invalid date/time \\
+OP-19 & GET & /api/admin/audit-logs & ADMIN & filters/time range & accountability records & permission denied \\
+OP-20 & GET & /api/admin/health & ADMIN & none & service diagnostics & backend outage \\
+\hline
+\end{tabular}
+\end{table*}
+
+\section{Expanded Evaluation Matrix and Acceptance Criteria}
+\subsection{Acceptance Criteria Definitions}
+The following criteria are used to evaluate operational readiness:
+\begin{itemize}
+    \item \textbf{AC-1 Functional Completeness:} all core role workflows execute without blocking defects.
+    \item \textbf{AC-2 Authorization Correctness:} disallowed actions consistently return secure rejection.
+    \item \textbf{AC-3 Integrity Reliability:} commitment verification is deterministic under repeated checks.
+    \item \textbf{AC-4 Recovery Robustness:} transient subsystem failures preserve eventual consistency.
+    \item \textbf{AC-5 Operator Usability:} role dashboards remain interpretable and action-oriented.
+\end{itemize}
+
+\subsection{Scenario-Oriented Test Matrix}
+\begin{table*}[!t]
+\caption{Scenario-Oriented Validation Matrix}
+\centering
+\begin{tabular}{p{0.9cm} p{2.9cm} p{2.2cm} p{3.7cm} p{2.2cm} p{2.0cm}}
+\hline
+\textbf{SCN} & \textbf{Scenario} & \textbf{Role} & \textbf{Expected Result} & \textbf{Observed Result} & \textbf{Status} \\
+\hline
+S-01 & New user registration and login & ADMIN/POLICE/FORENSIC/JUDGE & user created, JWT issued, route redirect by role & successful in all role paths & Pass \\
+S-02 & Unauthorized case approval attempt & POLICE & request rejected with permission error & rejected with 403 path & Pass \\
+S-03 & Valid case approval & ADMIN & state moves PENDING\_APPROVAL to APPROVED & transition persisted and visible & Pass \\
+S-04 & Evidence upload and CID capture & POLICE & metadata stored, CID present, hash generated & successful with stored references & Pass \\
+S-05 & Non-assigned forensic analysis attempt & FORENSIC(non-assigned) & operation blocked with assignment error & blocked with conflict/forbidden result & Pass \\
+S-06 & Assigned forensic completion & FORENSIC(assigned) & analysis status advanced and report attached & successful with timeline update & Pass \\
+S-07 & Premature verdict attempt without prerequisites & JUDGE & request rejected by state/precondition logic & rejected as expected & Pass \\
+S-08 & Valid verdict closure & JUDGE(assigned) & case closed, verdict stored, immutable semantics set & closure achieved with tx reference & Pass \\
+S-09 & Integrity mismatch simulation & FORENSIC/ADMIN & tamper pathway raised and logged & mismatch flagged in verification path & Pass \\
+S-10 & Logout and protected route revisit & Any role & session terminated; protected route blocked & blocked post-logout navigation & Pass \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsection{Evaluation Commentary}
+The scenario matrix indicates stable compliance with lifecycle and access invariants in prototype conditions. Remaining work should emphasize scale and adversarial stress beyond functional acceptance conditions.
+
+\section{Design Trade-off Analysis}
+\subsection{Storage Trade-offs}
+The hybrid model trades absolute on-chain completeness for practical throughput and cost stability. This choice is justified for evidence-heavy workloads where full on-chain payload storage is economically infeasible.
+
+\subsection{Latency Trade-offs}
+Blockchain commitment introduces non-negligible confirmation delay. JusticeChain addresses user experience impact through asynchronous handling and status-aware dashboard feedback.
+
+\subsection{Complexity Trade-offs}
+Multi-system consistency management increases engineering complexity. The design mitigates this through explicit reconciliation markers, deterministic workflow checks, and service separation.
+
+\subsection{Governance Trade-offs}
+Administrative authority is necessary for operational oversight but must be bounded by transparent auditability and role separation. The proposed model preserves this balance by restricting direct manipulation of forensic and judicial outcomes.
+
+\section{Deployment Blueprint for Institutional Adoption}
+\subsection{Phase-Wise Adoption Strategy}
+\begin{enumerate}
+    \item \textbf{Phase 1:} Internal pilot with synthetic or non-sensitive historical data.
+    \item \textbf{Phase 2:} Controlled live trial in limited jurisdiction scope.
+    \item \textbf{Phase 3:} Multi-unit integration with policy-governed rollout.
+    \item \textbf{Phase 4:} Full production operation with audit board oversight.
+\end{enumerate}
+
+\subsection{Institutional Readiness Factors}
+Successful adoption depends on procedural standardization, operator training, legal governance alignment, and continuous technical support. Technical quality alone is insufficient without institutional process harmonization.
+
+\subsection{Training and Change Management}
+Role-specific training artifacts should include workflow simulations, error-response guides, and integrity verification drills. This improves confidence and reduces process disruption during transition from legacy systems.
+
+\section{References Context and Reproducibility Notes}
+Reproducibility in justice technology research requires transparent mapping from requirement artifacts to design artifacts and implementation artifacts. JusticeChain supports this through linked SRS/SDD documentation, versioned source modules, and explicit endpoint/contract definitions.
+
+For empirical reproducibility, future work should publish anonymized benchmark scripts, standardized test fixtures, and environment manifests across backend, blockchain, and storage dependencies.
+
+\section{Conclusion}
+This paper introduced JusticeChain, a blockchain-integrated digital justice management framework designed for transparent case lifecycle management, tamper-evident evidence handling, and role-governed collaboration across justice stakeholders. By combining React, Express, MongoDB, IPFS, and Ethereum smart contracts, JusticeChain implements a hybrid trust architecture that balances performance with integrity guarantees.
+
+The prototype confirms that practical judicial workflow modernization can benefit from selective blockchain anchoring without sacrificing usability. The architecture and implementation presented here provide a reproducible reference for institutions seeking accountable digital justice infrastructure with stronger chain-of-custody confidence and process transparency.
+
+\section*{Acknowledgment}
+The authors thank the Department of Computer Science and Engineering, Jaya Engineering College, Chennai, India, and project guide Mrs. Rajalakshmi for academic guidance and support throughout the JusticeChain development lifecycle.
+
+\begin{thebibliography}{99}
+
+\bibitem{ieee1016}
+IEEE Computer Society, ``IEEE Standard for Information Technology---Systems Design---Software Design Descriptions,'' IEEE Std 1016-2009, 2009.
+
+\bibitem{ethdocs}
+Ethereum Foundation, ``Ethereum Developer Documentation,'' [Online]. Available: \url{https://ethereum.org/en/developers/docs/}. Accessed: Mar. 2026.
+
+\bibitem{solidity}
+Solidity Team, ``Solidity Documentation,'' [Online]. Available: \url{https://docs.soliditylang.org/}. Accessed: Mar. 2026.
+
+\bibitem{ipfsdocs}
+Protocol Labs, ``IPFS Documentation,'' [Online]. Available: \url{https://docs.ipfs.tech/}. Accessed: Mar. 2026.
+
+\bibitem{mongodb}
+MongoDB Inc., ``MongoDB Documentation,'' [Online]. Available: \url{https://www.mongodb.com/docs/}. Accessed: Mar. 2026.
+
+\bibitem{reactdocs}
+Meta Open Source, ``React Documentation,'' [Online]. Available: \url{https://react.dev/}. Accessed: Mar. 2026.
+
+\bibitem{expressdocs}
+OpenJS Foundation, ``Express.js Documentation,'' [Online]. Available: \url{https://expressjs.com/}. Accessed: Mar. 2026.
+
+\bibitem{jwt}
+M. Jones, J. Bradley, and N. Sakimura, ``JSON Web Token (JWT),'' IETF RFC 7519, 2015.
+
+\bibitem{sha}
+National Institute of Standards and Technology, ``Secure Hash Standard (SHS),'' FIPS PUB 180-4, 2015.
+
+\bibitem{justicechainrepo}
+J. K., ``JusticeChain Project Repository and Technical Documentation,'' Internal Project Artifacts: SRS, SDD, Backend/Frontend source modules, 2026.
+
+\bibitem{wagmi}
+Wagmi Contributors, ``Wagmi Documentation,'' [Online]. Available: \url{https://wagmi.sh/}. Accessed: Mar. 2026.
+
+\bibitem{web3modal}
+WalletConnect, ``Web3Modal Documentation,'' [Online]. Available: \url{https://docs.walletconnect.com/}. Accessed: Mar. 2026.
+
+\bibitem{bcrypt}
+N. Provos and D. Mazi\`eres, ``A Future-Adaptable Password Scheme,'' USENIX Annual Technical Conference, 1999.
+
+\bibitem{owasp}
+OWASP Foundation, ``OWASP Top 10 Web Application Security Risks,'' [Online]. Available: \url{https://owasp.org/www-project-top-ten/}. Accessed: Mar. 2026.
+
+\bibitem{chaincustody}
+S. L. Garfinkel, ``Digital Forensics Research: The Next 10 Years,'' \textit{Digital Investigation}, vol. 7, pp. S64--S73, 2010.
+
+\end{thebibliography}
+
+\end{document}
