@@ -178,32 +178,7 @@ export default function ForensicDashboard() {
   useEffect(() => {
     if (!sessionState) {
       navigate("/login");
-      return;
-    }
-    if (!sessionState?.token) {
-      return;
-    }
-    fetchCases();
-  }, [sessionState?.token]);
-
-  // Auto-verify wallet and role when dashboard loads
-  useEffect(() => {
-    if (sessionState?.token && !chainState.roleVerified && !chainState.address) {
-      ensureWallet();
-    }
-  }, [sessionState?.token]);
-
-  useEffect(() => {
-    if (!selectedCaseId) {
-      setEvidenceList([]);
-      setSelectedEvidenceId("");
-      setReports([]);
-      return;
-    }
-    fetchEvidenceByCase(selectedCaseId);
-    fetchReportsByCase(selectedCaseId);
-  }, [selectedCaseId]);
-
+              </div>
   useEffect(() => {
     if (!selectedEvidenceId || !selectedEvidence) {
       return;
@@ -804,41 +779,12 @@ export default function ForensicDashboard() {
                 {toasts.map((toast) => (
                   <div
                     key={toast.id}
-                    className={`px-4 py-3 rounded-2xl border text-sm shadow ${
-                      toast.type === "success"
-                        ? "bg-green-100 border-green-300 text-green-800"
-                        : "bg-red-100 border-red-300 text-red-800"
-                    }`}
+                    className={`px-4 py-3 rounded-2xl border text-sm shadow ${toast.type === "success" ? "bg-green-100 border-green-300 text-green-800" : "bg-red-100 border-red-300 text-red-800"}`}
                   >
                     {toast.message}
                   </div>
                 ))}
               </div>
-
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm">{item.caseId}</p>
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(
-                          item.status
-                        )}`}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">{item.title}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Police: {item.registeredBy?.username || "-"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Created: {formatDate(item.createdAt)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           <div className="lg:col-span-2 space-y-6">
             {activeTab === "Cases" && (
