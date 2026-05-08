@@ -577,19 +577,19 @@ export default function PoliceDashboard() {
   if (!sessionState) return <div className="p-10 text-center">Redirecting...</div>;
 
   const sidebarTabs = [
-    { id: "dashboard", label: "📊 Dashboard", icon: "📊", count: stats.totalCases, highlight: true },
-    { id: "cases", label: "📋 My Cases", icon: "📋", count: stats.totalCases },
-    { id: "draft", label: "📝 Draft", icon: "📝", count: stats.draftCases },
-    { id: "pending", label: "⏳ Pending", icon: "⏳", count: stats.pendingCases },
-    { id: "approved", label: "✅ Approved", icon: "✅", count: stats.approvedCases },
-    { id: "forensic", label: "🔬 In Forensic", icon: "🔬", count: stats.inForensic },
-    { id: "hearing", label: "⚖️ Hearing", icon: "⚖️", count: stats.readyForHearing },
-    { id: "evidence", label: "🔍 Evidence", icon: "🔍", count: stats.totalEvidence },
-    { id: "suspects", label: "👤 Suspects", icon: "👤", count: stats.totalSuspects },
-    { id: "witnesses", label: "👥 Witnesses", icon: "👥", count: stats.totalWitnesses },
-    { id: "notes", label: "📝 Notes", icon: "📝", count: stats.totalNotes },
-    { id: "logs", label: "📋 Activity Logs", icon: "📋" },
-    { id: "verify", label: "⛓️ Verification", icon: "⛓️" }
+    { id: "dashboard", label: "📊 Dashboard", icon: "", count: stats.totalCases, highlight: true },
+    { id: "cases", label: "📋 My Cases", icon: "", count: stats.totalCases },
+    { id: "draft", label: "📝 Draft", icon: "", count: stats.draftCases },
+    { id: "pending", label: "⏳ Pending", icon: "", count: stats.pendingCases },
+    { id: "approved", label: "✅ Approved", icon: "", count: stats.approvedCases },
+    { id: "forensic", label: "🔬 In Forensic", icon: "", count: stats.inForensic },
+    { id: "hearing", label: "⚖️ Hearing", icon: "", count: stats.readyForHearing },
+    { id: "evidence", label: "🔍 Evidence", icon: "", count: stats.totalEvidence },
+    { id: "suspects", label: "👤 Suspects", icon: "", count: stats.totalSuspects },
+    { id: "witnesses", label: "👥 Witnesses", icon: "", count: stats.totalWitnesses },
+    { id: "notes", label: "📝 Notes", icon: "", count: stats.totalNotes },
+    { id: "logs", label: "📋 Activity Logs", icon: "" },
+    { id: "verify", label: "⛓️ Verification", icon: "" }
   ];
 
   const handleTabChange = (tabId) => {
