@@ -1272,6 +1272,8 @@ export default function ForensicDashboard() {
               </div>
             )}
             </div>
+          </div>
+            </div>
           </main>
         </div>
       </div>
