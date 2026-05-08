@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Separate allocation workflows
   const [forensicAllocationCaseId, setForensicAllocationCaseId] = useState(null);
@@ -326,8 +327,24 @@ export default function AdminDashboard() {
     activeJudge: activeSessions.filter(s => s.role === "judge").length
   };
 
+  const sidebarTabs = [
+    { id: "dashboard", label: "Dashboard", icon: "📊", count: stats.totalCases },
+    { id: "online", label: "Online Users", icon: "🟢", count: stats.activeUsers },
+    { id: "cases", label: "Cases", icon: "📋", count: stats.pendingApproval },
+    { id: "users", label: "Users", icon: "👥", count: stats.totalUsers },
+    { id: "evidence", label: "Evidence", icon: "🔍", count: stats.totalEvidence },
+    { id: "blockchain", label: "Blockchain", icon: "🔗" },
+    { id: "audit", label: "Audit Logs", icon: "🔐" },
+    { id: "system", label: "System", icon: "🖥️" }
+  ];
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setIsSidebarOpen(false);
+  };
+
   return (
-    <div className="dashboard-shell min-h-screen">
+    <div className="dashboard-shell min-h-screen overflow-x-hidden">
       <div className="absolute inset-0 login-bg-grid" />
       <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-rose-200 page-orb animate-blob" />
       <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-sky-200 page-orb animate-floatSlow" />
@@ -335,24 +352,110 @@ export default function AdminDashboard() {
 
       <div className="relative z-10">
         <DashboardSwitcher />
-        
-        {/* Navbar */}
-        <nav className="dashboard-nav animate-fadeInDown text-white p-4">
-          <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div>
-            <h1 className="text-2xl font-bold">⚙️ Admin Dashboard</h1>
-            <p className="text-sm text-white/80">System Control Center</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="bg-rose-500/90 hover:bg-rose-500 px-4 py-2 rounded transition"
-          >
-            Logout
-          </button>
+
+        <nav className="sticky top-0 z-30 border-b border-slate-200/60 bg-slate-950/90 text-white backdrop-blur-xl shadow-[0_18px_40px_-28px_rgba(15,23,42,0.6)] animate-fadeInDown">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 p-2 text-white transition hover:bg-white/10 lg:hidden"
+                aria-label="Open sidebar"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-xl font-bold sm:text-2xl">⚙️ Admin Dashboard</h1>
+                <p className="text-xs text-white/70 sm:text-sm">System Control Center</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl bg-rose-500/90 px-4 py-2 text-sm font-semibold transition hover:bg-rose-500"
+            >
+              Logout
+            </button>
           </div>
         </nav>
 
-        <div className="max-w-7xl mx-auto p-6 animate-fadeInUp">
+        <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">
+          {isSidebarOpen && (
+            <button
+              type="button"
+              aria-label="Close sidebar overlay"
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"
+            />
+          )}
+
+          <aside className={`fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200/70 bg-white/90 p-5 shadow-2xl backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:block lg:translate-x-0 lg:rounded-[2rem] lg:border lg:shadow-[0_20px_60px_-20px_rgba(15,23,42,0.22)] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+            <div className="flex h-full flex-col gap-5 overflow-y-auto">
+              <div className="flex items-center justify-between lg:justify-start lg:gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Navigation</p>
+                  <h2 className="mt-1 text-lg font-bold text-slate-900">Dashboard Hub</h2>
+                </div>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="rounded-full bg-slate-100 p-2 text-slate-700 transition hover:bg-slate-200 lg:hidden"
+                  aria-label="Close sidebar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="rounded-3xl bg-gradient-to-br from-slate-950 to-slate-800 p-4 text-white shadow-lg">
+                <p className="text-xs uppercase tracking-[0.24em] text-white/60">Real-time sync</p>
+                <p className="mt-2 text-lg font-bold">Active monitoring</p>
+                <div className="mt-4 flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
+                  <div>
+                    <p className="text-xs text-white/70">Dashboard refresh</p>
+                    <p className="font-semibold">{activeTab === "dashboard" ? "Every 5s" : "Every 10s"}</p>
+                  </div>
+                  <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+              </div>
+
+              <nav className="space-y-2">
+                {sidebarTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                      activeTab === tab.id
+                        ? "border-slate-900 bg-slate-900 text-white shadow-lg"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-lg">{tab.icon}</span>
+                      <span className="font-semibold">{tab.label}</span>
+                    </span>
+                    {typeof tab.count === "number" && (
+                      <span className={`min-w-8 rounded-full px-2.5 py-1 text-center text-xs font-bold ${activeTab === tab.id ? "bg-white/15 text-white" : "bg-slate-100 text-slate-700"}`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Updated</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{lastUpdateTime.toLocaleTimeString()}</p>
+                <button
+                  onClick={fetchAllData}
+                  className="mt-4 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Refresh Now
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          <main className="min-w-0 flex-1 animate-fadeInUp lg:pl-2">
+            <div className="rounded-[2rem] border border-slate-200/70 bg-white/80 p-4 shadow-[0_22px_60px_-28px_rgba(15,23,42,0.32)] backdrop-blur-xl sm:p-6">
           {/* Messages */}
           {successMessage && (
             <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-2xl">
@@ -364,46 +467,20 @@ export default function AdminDashboard() {
               {errorMessage}
             </div>
           )}
-
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6 border-b">
-          {[
-            { id: "dashboard", label: "📊 Dashboard" },
-            { id: "online", label: "🟢 Online Users" },
-            { id: "cases", label: "📋 Cases" },
-            { id: "users", label: "👥 Users" },
-            { id: "evidence", label: "🔍 Evidence" },
-            { id: "blockchain", label: "🔗 Blockchain" },
-            { id: "audit", label: "🔐 Audit Logs" },
-            { id: "system", label: "🖥️ System" }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 font-semibold rounded-t transition ${
-                activeTab === tab.id
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded border border-green-300">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-semibold text-green-700">
-                Real-time {activeTab === "dashboard" ? "5s" : "10s"}
-              </span>
-            </div>
-            <button
-              onClick={fetchAllData}
-              className="ml-auto px-4 py-2 font-semibold rounded bg-slate-900 text-white hover:bg-slate-800"
-            >
-              Refresh Now
-            </button>
-          </div>
-        </div>
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:hidden">
+                <div className="flex items-center gap-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-sm font-semibold text-slate-700">
+                    Real-time {activeTab === "dashboard" ? "5s" : "10s"}
+                  </span>
+                </div>
+                <button
+                  onClick={fetchAllData}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Refresh
+                </button>
+              </div>
 
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
@@ -1038,6 +1115,8 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+            </div>
+          </main>
         </div>
       </div>
     </div>
