@@ -178,7 +178,32 @@ export default function ForensicDashboard() {
   useEffect(() => {
     if (!sessionState) {
       navigate("/login");
-              </div>
+      return;
+    }
+    if (!sessionState?.token) {
+      return;
+    }
+    fetchCases();
+  }, [sessionState?.token]);
+
+  // Auto-verify wallet and role when dashboard loads
+  useEffect(() => {
+    if (sessionState?.token && !chainState.roleVerified && !chainState.address) {
+      ensureWallet();
+    }
+  }, [sessionState?.token]);
+
+  useEffect(() => {
+    if (!selectedCaseId) {
+      setEvidenceList([]);
+      setSelectedEvidenceId("");
+      setReports([]);
+      return;
+    }
+    fetchEvidenceByCase(selectedCaseId);
+    fetchReportsByCase(selectedCaseId);
+  }, [selectedCaseId]);
+
   useEffect(() => {
     if (!selectedEvidenceId || !selectedEvidence) {
       return;
