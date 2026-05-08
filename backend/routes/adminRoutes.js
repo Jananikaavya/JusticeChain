@@ -34,9 +34,24 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
     const logs = await ActivityLog.find()
       .sort({ timestamp: -1 })
       .limit(100)
-      .populate('userId', 'username role');
-    
-    res.json({ logs });
+      .populate('userId', 'username role')
+      .populate('performedBy', 'username role')
+      .populate('relatedCaseId', 'caseId title');
+
+    const normalizedLogs = logs.map((log) => ({
+      id: log._id,
+      timestamp: log.timestamp,
+      user: log.performedBy?.username || log.userId?.username || 'System',
+      action: log.action,
+      details: log.description || log.details || '',
+      status: 'success',
+      role: log.performedByRole || log.performedBy?.role || log.userId?.role || 'SYSTEM',
+      caseId: log.relatedCaseId?.caseId || log.relatedCaseId || null,
+      caseTitle: log.relatedCaseId?.title || null,
+      metadata: log.metadata || null
+    }));
+
+    res.json({ logs: normalizedLogs });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

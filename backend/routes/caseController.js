@@ -25,6 +25,22 @@ const logActivity = async (userId, userRole, action, caseId, resourceId = null, 
   }
 };
 
+const normalizeCaseForDashboard = (caseDoc) => {
+  if (!caseDoc) return caseDoc;
+
+  const caseObject = typeof caseDoc.toObject === 'function'
+    ? caseDoc.toObject({ virtuals: true })
+    : { ...caseDoc };
+
+  return {
+    ...caseObject,
+    forensicOfficerId: caseObject.assignedForensic?._id || caseObject.assignedForensic || null,
+    judgeId: caseObject.assignedJudge?._id || caseObject.assignedJudge || null,
+    forensicOfficer: caseObject.assignedForensic || null,
+    judge: caseObject.assignedJudge || null
+  };
+};
+
 // Create a new case (Police Only)
 export const createCase = async (req, res) => {
   try {
@@ -322,7 +338,7 @@ export const getAllCases = async (req, res) => {
       .populate('evidence')
       .sort({ createdAt: -1 });
 
-    res.json({ cases });
+    res.json({ cases: cases.map(normalizeCaseForDashboard) });
   } catch (error) {
     console.error('Error fetching cases:', error);
     res.status(500).json({ message: 'Failed to fetch cases', error: error.message });
@@ -357,7 +373,7 @@ export const getCasesByRole = async (req, res) => {
       .populate('witnesses')
       .sort({ createdAt: -1 });
 
-    res.json({ cases });
+    res.json({ cases: cases.map(normalizeCaseForDashboard) });
   } catch (error) {
     console.error('Error fetching cases:', error);
     res.status(500).json({ message: 'Failed to fetch cases', error: error.message });
@@ -383,7 +399,7 @@ export const getCaseById = async (req, res) => {
       return res.status(404).json({ message: 'Case not found' });
     }
 
-    res.json(caseData);
+    res.json({ case: normalizeCaseForDashboard(caseData) });
   } catch (error) {
     console.error('Error fetching case:', error);
     res.status(500).json({ message: 'Failed to fetch case', error: error.message });
@@ -422,7 +438,7 @@ export const updateCaseStatus = async (req, res) => {
 
     res.json({
       message: 'Case status updated',
-      case: caseData
+      case: normalizeCaseForDashboard(caseData)
     });
   } catch (error) {
     console.error('Error updating case:', error);
@@ -488,9 +504,16 @@ export const assignForensic = async (req, res) => {
     caseExists.status = 'IN_FORENSIC_ANALYSIS';
 
     const updated = await caseExists.save();
-    const populated = await updated.populate('assignedForensic', 'username');
+    const populated = normalizeCaseForDashboard(await updated.populate('assignedForensic', 'username'));
 
-    await logActivity(userId, user.role, 'FORENSIC_ASSIGNED', updated._id);
+    await logActivity(
+      userId,
+      user.role,
+      'FORENSIC_ASSIGNED',
+      updated._id,
+      forensicOfficerId,
+      `Assigned forensic officer ${forensicOfficer.username} to case ${caseExists.caseId}`
+    );
 
     res.json({
       message: 'Forensic analyst assigned successfully',
@@ -560,9 +583,16 @@ export const assignJudge = async (req, res) => {
     caseExists.status = 'HEARING';
 
     const updated = await caseExists.save();
-    const populated = await updated.populate('assignedJudge', 'username');
+    const populated = normalizeCaseForDashboard(await updated.populate('assignedJudge', 'username'));
 
-    await logActivity(userId, user.role, 'JUDGE_ASSIGNED', updated._id);
+    await logActivity(
+      userId,
+      user.role,
+      'JUDGE_ASSIGNED',
+      updated._id,
+      judgeId,
+      `Assigned judge ${judge.username} to case ${caseExists.caseId}`
+    );
 
     res.json({
       message: 'Judge assigned successfully',
