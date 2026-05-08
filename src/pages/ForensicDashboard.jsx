@@ -86,6 +86,8 @@ export default function ForensicDashboard() {
   const navigate = useNavigate();
   const [sessionState, setSessionState] = useState(() => getSession());
   const [activeTab, setActiveTab] = useState("Cases");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
 
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -94,6 +96,10 @@ export default function ForensicDashboard() {
   const [verificationResults, setVerificationResults] = useState({});
   const [activityLogs, setActivityLogs] = useState([]);
   const [chainState, setChainState] = useState(emptyChainState);
+
+  // Track count changes for animations
+  const [previousCounts, setPreviousCounts] = useState({});
+  const [countChangeIndicators, setCountChangeIndicators] = useState({});
 
   const [reportForm, setReportForm] = useState({
     observations: "",
@@ -128,6 +134,42 @@ export default function ForensicDashboard() {
     () => evidenceList.find((item) => item._id === selectedEvidenceId) || null,
     [evidenceList, selectedEvidenceId]
   );
+
+  // Calculate statistics for sidebar
+  const stats = {
+    totalCases: cases.length,
+    approvedCases: cases.filter(c => c.status === "APPROVED").length,
+    inForensic: cases.filter(c => c.status === "IN_FORENSIC_ANALYSIS").length,
+    readyForCourt: cases.filter(c => ["ANALYSIS_COMPLETE", "READY_FOR_HEARING"].includes(c.status)).length,
+    closedCases: cases.filter(c => c.status === "CLOSED").length,
+    totalEvidence: evidenceList.length,
+    totalReports: reports.length
+  };
+
+  // Detect count changes and show indicators
+  useEffect(() => {
+    const countKeys = ['totalCases', 'totalEvidence', 'totalReports'];
+    const newIndicators = {};
+    
+    countKeys.forEach(key => {
+      if (previousCounts[key] !== undefined && previousCounts[key] !== stats[key]) {
+        newIndicators[key] = stats[key] > previousCounts[key] ? 'increase' : 'decrease';
+        setTimeout(() => {
+          setCountChangeIndicators(prev => ({ ...prev, [key]: null }));
+        }, 1000);
+      }
+    });
+
+    if (Object.keys(newIndicators).length > 0) {
+      setCountChangeIndicators(newIndicators);
+    }
+    
+    setPreviousCounts({
+      totalCases: stats.totalCases,
+      totalEvidence: stats.totalEvidence,
+      totalReports: stats.totalReports
+    });
+  }, [stats.totalCases, stats.totalEvidence, stats.totalReports]);
 
   useEffect(() => {
     setSessionState(getSession());
@@ -625,87 +667,154 @@ export default function ForensicDashboard() {
     : null;
 
   return (
-    <div className="dashboard-shell min-h-screen">
-      <div className="absolute inset-0 login-bg-grid" />
-      <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-rose-200 page-orb animate-blob" />
-      <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-sky-200 page-orb animate-floatSlow" />
-      <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-emerald-200 page-orb animate-glowPulse" />
+    <div className="dashboard-shell min-h-screen overflow-x-hidden">
+      <div className="absolute inset-0 login-bg-grid opacity-10" />
+      <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-purple-200 page-orb animate-blob" />
+      <div className="absolute top-20 right-10 h-72 w-72 rounded-full bg-pink-200 page-orb animate-floatSlow" />
+      <div className="absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-indigo-200 page-orb animate-glowPulse" />
 
       <div className="relative z-10">
         <DashboardSwitcher />
-        <nav className="dashboard-nav animate-fadeInDown text-white p-4">
-          <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div>
-            <h1 className="text-2xl font-bold">🔬 Forensic Dashboard</h1>
-            <p className="text-sm text-white/80">
-              Evidence integrity, reporting, and chain-of-custody
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="bg-rose-500/90 hover:bg-rose-500 px-4 py-2 rounded transition"
-          >
-            Logout
-          </button>
+
+        <nav className="sticky top-0 z-30 border-b border-purple-200/60 bg-slate-950/90 text-white backdrop-blur-xl shadow-[0_18px_40px_-28px_rgba(15,23,42,0.6)] animate-fadeInDown">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 p-2 text-white transition hover:bg-white/10 lg:hidden"
+                aria-label="Open sidebar"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-xl font-bold sm:text-2xl">🔬 Forensic Dashboard</h1>
+                <p className="text-xs text-white/70 sm:text-sm">Evidence Analysis & Reporting</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl bg-rose-500/90 px-4 py-2 text-sm font-semibold transition hover:bg-rose-500"
+            >
+              Logout
+            </button>
           </div>
         </nav>
 
-        <div className="max-w-7xl mx-auto p-6 animate-fadeInUp">
-          <div className="space-y-3 mb-6">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`px-4 py-3 rounded-2xl border text-sm shadow ${
-                toast.type === "success"
-                  ? "bg-green-100 border-green-300 text-green-800"
-                  : "bg-red-100 border-red-300 text-red-800"
-              }`}
-            >
-              {toast.message}
-            </div>
-          ))}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-bold mb-2">Welcome, {sessionState?.username}</h2>
-          <p className="text-gray-600">
-            Role: {sessionState?.role} | Wallet: {sessionState?.wallet?.slice(0, 12) || "-"}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-2 mb-6 flex flex-wrap gap-2">
-          {TABS.map((tab) => (
+        <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">
+          {isSidebarOpen && (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded text-sm font-semibold transition ${
-                activeTab === tab
-                  ? "bg-purple-600 text-white"
-                  : "text-purple-700 hover:bg-purple-100"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+              type="button"
+              aria-label="Close sidebar overlay"
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"
+            />
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-bold mb-4">Assigned Cases</h3>
-            {busy.loading ? (
-              <p className="text-gray-600 text-sm">Loading cases...</p>
-            ) : cases.length === 0 ? (
-              <p className="text-gray-600 text-sm">No cases assigned yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {cases.map((item) => (
+          <aside className={`fixed inset-y-0 left-0 z-40 w-80 border-r border-purple-200/70 bg-white/90 p-5 shadow-2xl backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:block lg:translate-x-0 lg:rounded-[2rem] lg:border lg:shadow-[0_20px_60px_-20px_rgba(15,23,42,0.22)] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+            <div className="flex h-full flex-col gap-5 overflow-y-auto">
+              <div className="flex items-center justify-between lg:justify-start lg:gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Navigation</p>
+                  <h2 className="mt-1 text-lg font-bold text-slate-900">Forensic Hub</h2>
+                </div>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="rounded-full bg-slate-100 p-2 text-slate-700 transition hover:bg-slate-200 lg:hidden"
+                  aria-label="Close sidebar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="rounded-3xl bg-gradient-to-br from-purple-600 to-purple-700 p-4 text-white shadow-lg">
+                <p className="text-xs uppercase tracking-[0.24em] text-white/70">Analysis & Evidence</p>
+                <p className="mt-2 text-lg font-bold">Forensic Workflow</p>
+                <div className="mt-4 flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
+                  <div>
+                    <p className="text-xs text-white/70">Dashboard refresh</p>
+                    <p className="font-semibold">Every 10s</p>
+                  </div>
+                  <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+              </div>
+
+              <nav className="space-y-2">
+                {[
+                  { id: "dashboard", label: "📊 Dashboard", icon: "📊", count: stats.totalCases, highlight: true },
+                  { id: "cases", label: "📋 My Cases", icon: "📋", count: stats.totalCases },
+                  { id: "approved", label: "✅ Approved", icon: "✅", count: stats.approvedCases },
+                  { id: "forensic", label: "🔬 In Analysis", icon: "🔬", count: stats.inForensic },
+                  { id: "ready", label: "⚖️ Ready", icon: "⚖️", count: stats.readyForCourt },
+                  { id: "evidence", label: "🔍 Evidence", icon: "🔍", count: stats.totalEvidence },
+                  { id: "reports", label: "📄 Reports", icon: "📄", count: stats.totalReports },
+                  { id: "logs", label: "📋 Activity Logs", icon: "📋" },
+                  { id: "verify", label: "✔️ Verification", icon: "✔️" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      const tabMapping = {
+                        dashboard: "Cases", cases: "Cases", approved: "Cases", forensic: "Cases", ready: "Cases",
+                        evidence: "Evidence", reports: "Reports", logs: "Logs", verify: "Verification"
+                      };
+                      setActiveTab(tabMapping[tab.id] || "Cases");
+                      setIsSidebarOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                      activeTab === (tab.id === "cases" ? "Cases" : tab.id === "evidence" ? "Evidence" : tab.id === "reports" ? "Reports" : tab.id === "logs" ? "Logs" : "Verification")
+                        ? "border-purple-900 bg-purple-900 text-white shadow-lg"
+                        : "border-purple-200 bg-white text-purple-900 hover:border-purple-300 hover:bg-purple-50"
+                    } ${tab.highlight ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-lg">{tab.icon}</span>
+                      <span className="font-semibold">{tab.label}</span>
+                    </span>
+                    {typeof tab.count === "number" && (
+                      <span className={`min-w-8 rounded-full px-2.5 py-1 text-center text-xs font-bold transition`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="rounded-3xl border border-purple-200 bg-purple-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-purple-700">Updated</p>
+                <p className="mt-2 text-sm font-semibold text-purple-900">{lastUpdateTime.toLocaleTimeString()}</p>
+                <button
+                  onClick={() => {
+                    fetchCases();
+                    setLastUpdateTime(new Date());
+                  }}
+                  className="mt-4 w-full rounded-2xl bg-purple-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-800"
+                >
+                  Refresh Now
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          <main className="min-w-0 flex-1 animate-fadeInUp lg:pl-2">
+            <div className="rounded-[2rem] border border-purple-200/70 bg-white/80 p-4 shadow-[0_22px_60px_-28px_rgba(15,23,42,0.32)] backdrop-blur-xl sm:p-6">
+              {/* Toast messages in main area */}
+              <div className="mb-6 space-y-3">
+                {toasts.map((toast) => (
                   <div
-                    key={item._id}
-                    onClick={() => setSelectedCaseId(item._id)}
-                    className={`p-3 rounded cursor-pointer border-2 transition ${
-                      selectedCaseId === item._id
-                        ? "border-purple-600 bg-purple-50"
-                        : "border-gray-200 hover:border-purple-400"
+                    key={toast.id}
+                    className={`px-4 py-3 rounded-2xl border text-sm shadow ${
+                      toast.type === "success"
+                        ? "bg-green-100 border-green-300 text-green-800"
+                        : "bg-red-100 border-red-300 text-red-800"
+                    }`}
+                  >
+                    {toast.message}
+                  </div>
+                ))}
+              </div>
+
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1191,10 +1300,27 @@ export default function ForensicDashboard() {
                 ) : null}
               </div>
             )}
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Toast Notifications */}
+      <div className="fixed bottom-6 right-6 space-y-2 z-50">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`px-4 py-3 rounded-2xl border text-sm shadow ${
+              toast.type === "success"
+                ? "bg-green-100 border-green-300 text-green-800"
+                : "bg-red-100 border-red-300 text-red-800"
+            }`}
+          >
+            {toast.message}
           </div>
-        </div>
-        </div>
+        ))}
       </div>
     </div>
   );
 }
+
