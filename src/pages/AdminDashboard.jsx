@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const [activeSessions, setActiveSessions] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -34,8 +35,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (session?.token) {
       fetchAllData();
-      // Refresh every 30 seconds (was 10 - too aggressive and causing server exhaustion)
-      const interval = setInterval(fetchAllData, 30000);
+      // Refresh every 10 seconds for real-time updates
+      const interval = setInterval(fetchAllData, 10000);
       const onFocus = () => fetchAllData();
       const onVisibility = () => {
         if (document.visibilityState === "visible") {
@@ -51,6 +52,28 @@ export default function AdminDashboard() {
       };
     }
   }, [session]);
+
+  // Fetch cases data more frequently when on dashboard tab (for real-time updates)
+  useEffect(() => {
+    if (session?.token && activeTab === "dashboard") {
+      // Refresh cases every 5 seconds for real-time dashboard metrics
+      const dashboardInterval = setInterval(async () => {
+        try {
+          const casesRes = await fetch(`${API_URL}/cases/all`, {
+            headers: { Authorization: `Bearer ${session.token}` }
+          });
+          if (casesRes.ok) {
+            const data = await casesRes.json();
+            setAllCases(data.cases || []);
+          }
+        } catch (error) {
+          console.error("Error fetching cases for dashboard:", error);
+        }
+      }, 5000);
+      
+      return () => clearInterval(dashboardInterval);
+    }
+  }, [session, activeTab]);
 
   const fetchAllData = async () => {
     try {
@@ -116,6 +139,9 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
+    } finally {
+      // Update timestamp to show data was refreshed
+      setLastUpdateTime(new Date());
     }
   };
 
@@ -363,32 +389,55 @@ export default function AdminDashboard() {
               {tab.label}
             </button>
           ))}
-          <button
-            onClick={fetchAllData}
-            className="ml-auto px-4 py-2 font-semibold rounded bg-slate-900 text-white hover:bg-slate-800"
-          >
-            Refresh Now
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded border border-green-300">
+              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs font-semibold text-green-700">
+                Real-time {activeTab === "dashboard" ? "5s" : "10s"}
+              </span>
+            </div>
+            <button
+              onClick={fetchAllData}
+              className="ml-auto px-4 py-2 font-semibold rounded bg-slate-900 text-white hover:bg-slate-800"
+            >
+              Refresh Now
+            </button>
+          </div>
         </div>
 
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
           <div>
+            {/* Real-time Update Status */}
+            <div className="mb-6 bg-blue-50 border-2 border-blue-400 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-blue-700">
+                    🔄 Real-time Dashboard - Updates every 5 seconds
+                  </span>
+                </div>
+                <span className="text-xs text-blue-600">
+                  Last updated: {lastUpdateTime.toLocaleTimeString()}
+                </span>
+              </div>
+            </div>
+            
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500 hover:shadow-lg transition">
                 <h3 className="text-gray-600 text-sm font-semibold">Total Cases</h3>
                 <p className="text-3xl font-bold text-blue-600">{stats.totalCases}</p>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-gray-600 text-sm font-semibold">Pending Approval</h3>
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500 hover:shadow-lg transition animate-pulse">
+                <h3 className="text-gray-600 text-sm font-semibold">⏳ Pending Approval</h3>
                 <p className="text-3xl font-bold text-yellow-600">{stats.pendingApproval}</p>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-gray-600 text-sm font-semibold">In Forensic Analysis</h3>
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500 hover:shadow-lg transition animate-pulse">
+                <h3 className="text-gray-600 text-sm font-semibold">🔬 In Forensic Analysis</h3>
                 <p className="text-3xl font-bold text-purple-600">{stats.inForensic}</p>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500 hover:shadow-lg transition">
                 <h3 className="text-gray-600 text-sm font-semibold">Closed Cases</h3>
                 <p className="text-3xl font-bold text-green-600">{stats.closed}</p>
               </div>
@@ -396,15 +445,15 @@ export default function AdminDashboard() {
 
             {/* Additional Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-indigo-500 hover:shadow-lg transition">
                 <h3 className="text-gray-600 text-sm font-semibold">Total Users</h3>
                 <p className="text-3xl font-bold text-indigo-600">{stats.totalUsers}</p>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-gray-600 text-sm font-semibold">Ready for Hearing</h3>
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500 hover:shadow-lg transition animate-pulse">
+                <h3 className="text-gray-600 text-sm font-semibold">⚖️ Ready for Hearing</h3>
                 <p className="text-3xl font-bold text-orange-600">{stats.readyForHearing}</p>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500 hover:shadow-lg transition">
                 <h3 className="text-gray-600 text-sm font-semibold">Total Evidence Items</h3>
                 <p className="text-3xl font-bold text-red-600">{stats.totalEvidence}</p>
               </div>
@@ -435,8 +484,14 @@ export default function AdminDashboard() {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">📈 System Overview</h2>
+            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">📈 System Overview (Real-time)</h2>
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-green-600 font-semibold">Updating</span>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Approved Cases:</p>
@@ -445,11 +500,11 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-gray-600">Cases Status Distribution:</p>
                   <div className="mt-2 space-y-1 text-xs">
-                    <p>🟡 Pending: {stats.pendingApproval}</p>
-                    <p>🟢 Approved: {stats.approved}</p>
-                    <p>🟣 In Forensic: {stats.inForensic}</p>
-                    <p>🔵 Ready for Hearing: {stats.readyForHearing}</p>
-                    <p>⚫ Closed: {stats.closed}</p>
+                    <p className="flex items-center"><span className="mr-2">🟡</span> Pending: <span className="ml-auto font-bold text-yellow-600">{stats.pendingApproval}</span></p>
+                    <p className="flex items-center"><span className="mr-2">🟢</span> Approved: <span className="ml-auto font-bold text-green-600">{stats.approved}</span></p>
+                    <p className="flex items-center"><span className="mr-2">🟣</span> In Forensic: <span className="ml-auto font-bold text-purple-600">{stats.inForensic}</span></p>
+                    <p className="flex items-center"><span className="mr-2">🔵</span> Ready for Hearing: <span className="ml-auto font-bold text-orange-600">{stats.readyForHearing}</span></p>
+                    <p className="flex items-center"><span className="mr-2">⚫</span> Closed: <span className="ml-auto font-bold text-gray-600">{stats.closed}</span></p>
                   </div>
                 </div>
               </div>
