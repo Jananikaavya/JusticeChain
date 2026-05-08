@@ -32,6 +32,10 @@ export default function AdminDashboard() {
   const [judgeAllocationCaseId, setJudgeAllocationCaseId] = useState(null);
   const [judgeId, setJudgeId] = useState("");
 
+  // Track count changes for animations
+  const [previousCaseCounts, setPreviousCaseCounts] = useState({});
+  const [countChangeIndicators, setCountChangeIndicators] = useState({});
+
   // Fetch all data
   useEffect(() => {
     if (session?.token) {
@@ -334,10 +338,44 @@ export default function AdminDashboard() {
     activeJudge: activeSessions.filter(s => s.role === "judge").length
   };
 
+  // Detect count changes and show indicators
+  useEffect(() => {
+    const caseCountKeys = ['totalCases', 'pendingApproval', 'approved', 'inForensic', 'readyForHearing', 'closed'];
+    const newIndicators = {};
+    
+    caseCountKeys.forEach(key => {
+      if (previousCaseCounts[key] !== undefined && previousCaseCounts[key] !== stats[key]) {
+        newIndicators[key] = stats[key] > previousCaseCounts[key] ? 'increase' : 'decrease';
+        // Clear indicator after animation completes
+        setTimeout(() => {
+          setCountChangeIndicators(prev => ({ ...prev, [key]: null }));
+        }, 1000);
+      }
+    });
+
+    if (Object.keys(newIndicators).length > 0) {
+      setCountChangeIndicators(newIndicators);
+    }
+    
+    setPreviousCaseCounts({
+      totalCases: stats.totalCases,
+      pendingApproval: stats.pendingApproval,
+      approved: stats.approved,
+      inForensic: stats.inForensic,
+      readyForHearing: stats.readyForHearing,
+      closed: stats.closed
+    });
+  }, [stats.totalCases, stats.pendingApproval, stats.approved, stats.inForensic, stats.readyForHearing, stats.closed]);
+
   const sidebarTabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊", count: stats.totalCases },
     { id: "online", label: "Online Users", icon: "🟢", count: stats.activeUsers },
-    { id: "cases", label: "Cases", icon: "📋", count: stats.pendingApproval },
+    { id: "cases", label: "All Cases", icon: "📋", count: stats.totalCases, highlight: true },
+    { id: "pending", label: "Pending Approval", icon: "⏳", count: stats.pendingApproval },
+    { id: "approved", label: "Approved", icon: "✅", count: stats.approved },
+    { id: "forensic", label: "In Forensic", icon: "🔬", count: stats.inForensic },
+    { id: "hearing", label: "Ready for Hearing", icon: "⚖️", count: stats.readyForHearing },
+    { id: "closed", label: "Closed", icon: "✔️", count: stats.closed },
     { id: "users", label: "Users", icon: "👥", count: stats.totalUsers },
     { id: "evidence", label: "Evidence", icon: "🔍", count: stats.totalEvidence },
     { id: "blockchain", label: "Blockchain", icon: "🔗" },
@@ -433,17 +471,31 @@ export default function AdminDashboard() {
                       activeTab === tab.id
                         ? "border-slate-900 bg-slate-900 text-white shadow-lg"
                         : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
+                    } ${tab.highlight ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
                   >
                     <span className="flex items-center gap-3">
                       <span className="text-lg">{tab.icon}</span>
                       <span className="font-semibold">{tab.label}</span>
                     </span>
-                    {typeof tab.count === "number" && (
-                      <span className={`min-w-8 rounded-full px-2.5 py-1 text-center text-xs font-bold ${activeTab === tab.id ? "bg-white/15 text-white" : "bg-slate-100 text-slate-700"}`}>
-                        {tab.count}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {typeof tab.count === "number" && (
+                        <>
+                          {countChangeIndicators[tab.id] === 'increase' && (
+                            <span className="text-xs font-bold text-emerald-500 animate-bounce">📈 +1</span>
+                          )}
+                          {countChangeIndicators[tab.id] === 'decrease' && (
+                            <span className="text-xs font-bold text-red-500 animate-bounce">📉 -1</span>
+                          )}
+                          <span className={`min-w-8 rounded-full px-2.5 py-1 text-center text-xs font-bold transition ${
+                            activeTab === tab.id 
+                              ? "bg-white/15 text-white" 
+                              : "bg-slate-100 text-slate-700"
+                          } ${countChangeIndicators[tab.id] ? 'scale-110 animate-pulse' : ''}`}>
+                            {tab.count}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </button>
                 ))}
               </nav>
@@ -797,6 +849,197 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pending Approval Tab */}
+        {activeTab === "pending" && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">⏳ Pending Approval Cases ({stats.pendingApproval})</h2>
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-6">
+              <p className="text-yellow-800 text-sm">These cases are awaiting admin approval.</p>
+            </div>
+            {allCases.filter(c => countCasesByStatuses("PENDING_APPROVAL", "REGISTERED", "PENDING", "DRAFT") > 0 && ["PENDING_APPROVAL", "REGISTERED", "PENDING", "DRAFT"].includes(getNormalizedCaseStatus(c))).length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500">No pending cases</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-yellow-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Case Title</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Filed by</th>
+                      <th className="px-4 py-2 text-left">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCases.filter(c => ["PENDING_APPROVAL", "REGISTERED", "PENDING", "DRAFT"].includes(getNormalizedCaseStatus(c))).map(caseItem => (
+                      <tr key={caseItem._id} className="border-t hover:bg-yellow-50">
+                        <td className="px-4 py-2 font-semibold">{caseItem.title || "Untitled"}</td>
+                        <td className="px-4 py-2"><span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">{caseItem.status}</span></td>
+                        <td className="px-4 py-2 text-xs">{caseItem.policeOfficerId}</td>
+                        <td className="px-4 py-2">
+                          <button onClick={() => handleApproveCase(caseItem._id)} disabled={loading} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs transition disabled:bg-gray-400">
+                            ✅ Approve
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Approved Cases Tab */}
+        {activeTab === "approved" && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">✅ Approved Cases ({stats.approved})</h2>
+            <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-6">
+              <p className="text-green-800 text-sm">These cases have been approved and are being processed.</p>
+            </div>
+            {allCases.filter(c => getNormalizedCaseStatus(c) === "APPROVED").length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500">No approved cases</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-green-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Case Title</th>
+                      <th className="px-4 py-2 text-left">Forensic Expert</th>
+                      <th className="px-4 py-2 text-left">Judge</th>
+                      <th className="px-4 py-2 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCases.filter(c => getNormalizedCaseStatus(c) === "APPROVED").map(caseItem => (
+                      <tr key={caseItem._id} className="border-t hover:bg-green-50">
+                        <td className="px-4 py-2 font-semibold">{caseItem.title || "Untitled"}</td>
+                        <td className="px-4 py-2 text-xs">{caseItem.assignedForensic?.username || caseItem.forensicOfficerId || "Unassigned"}</td>
+                        <td className="px-4 py-2 text-xs">{caseItem.assignedJudge?.username || caseItem.judgeId || "Unassigned"}</td>
+                        <td className="px-4 py-2 space-x-2 flex gap-1">
+                          <button onClick={() => setForensicAllocationCaseId(caseItem._id)} className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">🔬</button>
+                          <button onClick={() => setJudgeAllocationCaseId(caseItem._id)} className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs">⚖️</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Forensic Analysis Tab */}
+        {activeTab === "forensic" && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">🔬 In Forensic Analysis ({stats.inForensic})</h2>
+            <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-6">
+              <p className="text-purple-800 text-sm">Cases currently undergoing forensic analysis.</p>
+            </div>
+            {allCases.filter(c => ["IN_FORENSIC_ANALYSIS", "FORENSIC_ASSIGNED", "ANALYSIS_IN_PROGRESS"].includes(getNormalizedCaseStatus(c))).length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500">No cases in forensic analysis</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-purple-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Case Title</th>
+                      <th className="px-4 py-2 text-left">Assigned Forensic Expert</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCases.filter(c => ["IN_FORENSIC_ANALYSIS", "FORENSIC_ASSIGNED", "ANALYSIS_IN_PROGRESS"].includes(getNormalizedCaseStatus(c))).map(caseItem => (
+                      <tr key={caseItem._id} className="border-t hover:bg-purple-50">
+                        <td className="px-4 py-2 font-semibold">{caseItem.title || "Untitled"}</td>
+                        <td className="px-4 py-2 text-xs">{caseItem.assignedForensic?.username || caseItem.forensicOfficerId || "N/A"}</td>
+                        <td className="px-4 py-2"><span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-800">{caseItem.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ready for Hearing Tab */}
+        {activeTab === "hearing" && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">⚖️ Ready for Hearing ({stats.readyForHearing})</h2>
+            <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-6">
+              <p className="text-orange-800 text-sm">Cases ready for court hearing.</p>
+            </div>
+            {allCases.filter(c => ["READY_FOR_HEARING", "HEARING", "HEARING_SCHEDULED", "ANALYSIS_COMPLETE"].includes(getNormalizedCaseStatus(c))).length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500">No cases ready for hearing</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-orange-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Case Title</th>
+                      <th className="px-4 py-2 text-left">Assigned Judge</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCases.filter(c => ["READY_FOR_HEARING", "HEARING", "HEARING_SCHEDULED", "ANALYSIS_COMPLETE"].includes(getNormalizedCaseStatus(c))).map(caseItem => (
+                      <tr key={caseItem._id} className="border-t hover:bg-orange-50">
+                        <td className="px-4 py-2 font-semibold">{caseItem.title || "Untitled"}</td>
+                        <td className="px-4 py-2 text-xs">{caseItem.assignedJudge?.username || caseItem.judgeId || "N/A"}</td>
+                        <td className="px-4 py-2"><span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">{caseItem.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Closed Cases Tab */}
+        {activeTab === "closed" && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">✔️ Closed Cases ({stats.closed})</h2>
+            <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-6">
+              <p className="text-gray-800 text-sm">Cases that have been closed.</p>
+            </div>
+            {allCases.filter(c => getNormalizedCaseStatus(c) === "CLOSED").length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500">No closed cases</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Case Title</th>
+                      <th className="px-4 py-2 text-left">Assigned Judge</th>
+                      <th className="px-4 py-2 text-left">Verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCases.filter(c => getNormalizedCaseStatus(c) === "CLOSED").map(caseItem => (
+                      <tr key={caseItem._id} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-2 font-semibold">{caseItem.title || "Untitled"}</td>
+                        <td className="px-4 py-2 text-xs">{caseItem.assignedJudge?.username || caseItem.judgeId || "N/A"}</td>
+                        <td className="px-4 py-2"><span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">{caseItem.verdict || "Pending"}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
