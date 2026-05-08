@@ -311,14 +311,21 @@ export default function AdminDashboard() {
     navigate("/login");
   };
 
+  const getNormalizedCaseStatus = (caseItem) => String(caseItem?.status || "").toUpperCase();
+
+  const countCasesByStatuses = (...statuses) => {
+    const allowedStatuses = new Set(statuses.map((status) => String(status).toUpperCase()));
+    return allCases.filter((caseItem) => allowedStatuses.has(getNormalizedCaseStatus(caseItem))).length;
+  };
+
   // Statistics Calculations
   const stats = {
     totalCases: allCases.length,
-    pendingApproval: allCases.filter(c => c.status === "PENDING_APPROVAL").length,
-    approved: allCases.filter(c => c.status === "APPROVED").length,
-    inForensic: allCases.filter(c => c.status === "IN_FORENSIC_ANALYSIS").length,
-    readyForHearing: allCases.filter(c => c.status === "READY_FOR_HEARING").length,
-    closed: allCases.filter(c => c.status === "CLOSED").length,
+    pendingApproval: countCasesByStatuses("PENDING_APPROVAL", "REGISTERED", "PENDING", "DRAFT"),
+    approved: countCasesByStatuses("APPROVED"),
+    inForensic: countCasesByStatuses("IN_FORENSIC_ANALYSIS", "FORENSIC_ASSIGNED", "ANALYSIS_IN_PROGRESS"),
+    readyForHearing: countCasesByStatuses("READY_FOR_HEARING", "HEARING", "HEARING_SCHEDULED", "ANALYSIS_COMPLETE"),
+    closed: countCasesByStatuses("CLOSED"),
     totalUsers: allUsers.length,
     totalEvidence: allEvidence.length,
     activeUsers: activeSessions.length,
@@ -646,8 +653,12 @@ export default function AdminDashboard() {
                             {caseItem.status}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-xs">{caseItem.forensicOfficerId || "Unassigned"}</td>
-                        <td className="px-4 py-2 text-xs">{caseItem.judgeId || "Unassigned"}</td>
+                        <td className="px-4 py-2 text-xs">
+                          {caseItem.assignedForensic?.username || caseItem.forensicOfficerId || "Unassigned"}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {caseItem.assignedJudge?.username || caseItem.judgeId || "Unassigned"}
+                        </td>
                         <td className="px-4 py-2 space-x-2 flex gap-1">
                           <button
                             onClick={() => setForensicAllocationCaseId(caseItem._id)}
